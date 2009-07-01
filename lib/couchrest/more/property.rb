@@ -18,10 +18,16 @@ module CouchRest
       def parse_type(type)
         if type.nil?
           @type = 'String'
-        elsif type.is_a?(Array) && type.empty?
-          @type = 'Array'
+        elsif type.kind_of?(Array) 
+          if type.empty? 
+            @type = type.class.name
+          else
+            @type = [type.first.to_s]
+          end
+        elsif type.kind_of?(Hash)
+          @type = [type.values.first]
         else
-          @type = type.is_a?(Array) ? [type.first.to_s] : type.to_s
+          @type = type.to_s
         end
       end
       

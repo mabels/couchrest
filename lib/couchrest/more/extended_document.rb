@@ -12,7 +12,7 @@ module CouchRest
     include CouchRest::Mixins::DesignDoc
     include CouchRest::Mixins::ExtendedAttachments
     include CouchRest::Mixins::ClassProxy
-    
+
     def self.inherited(subklass)
       subklass.send(:include, CouchRest::Mixins::Properties)
       subklass.class_eval <<-EOS, __FILE__, __LINE__
@@ -22,6 +22,7 @@ module CouchRest
       EOS
     end
     
+
     # Accessors
     attr_accessor :casted_by
     

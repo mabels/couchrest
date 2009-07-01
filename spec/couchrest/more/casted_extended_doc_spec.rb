@@ -33,8 +33,8 @@ describe "casting an extended document" do
   end
   
   it "should let the casted document who casted it" do
-    Car.new(:name => 'Renault 306', :driver => @driver)
-    @car.driver.casted_by.should == @car
+    car = Car.new(:name => 'Renault 306', :driver => @driver)
+    car.driver.casted_by.should == car
   end
   
 end

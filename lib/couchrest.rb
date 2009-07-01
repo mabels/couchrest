@@ -141,6 +141,7 @@ module CouchRest
     def put(uri, doc = nil)
       payload = doc.to_json if doc
       begin
+#puts "---------------#{payload}"
         JSON.parse(RestClient.put(uri, payload))
       rescue Exception => e
         if $COUCHREST_DEBUG == true

@@ -82,7 +82,7 @@ module CouchRest
     end
     
     # GET a document from CouchDB, by id. Returns a Ruby Hash.
-    def get(id, params = {})
+    def get(id, params = {}, model_typ = '')
       slug = escape_docid(id)
       url = CouchRest.paramify_url("#{@uri}/#{slug}", params)
       result = CouchRest.get(url)
@@ -90,7 +90,7 @@ module CouchRest
       doc = if /^_design/ =~ result["_id"]
         Design.new(result)
       else
-        Document.new(result)
+        Document.build(result, model_typ)
       end
       doc.database = self
       doc

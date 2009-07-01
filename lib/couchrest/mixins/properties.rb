@@ -6,7 +6,7 @@ module CouchRest
     module Properties
       
       class IncludeError < StandardError; end
-      
+
       def self.included(base)
         base.class_eval <<-EOS, __FILE__, __LINE__
             extlib_inheritable_accessor(:properties) unless self.respond_to?(:properties)
@@ -15,8 +15,10 @@ module CouchRest
         base.extend(ClassMethods)
         raise CouchRest::Mixins::Properties::IncludeError, "You can only mixin Properties in a class responding to [] and []=, if you tried to mixin CastedModel, make sure your class inherits from Hash or responds to the proper methods" unless (base.new.respond_to?(:[]) && base.new.respond_to?(:[]=))
       end
+
       
       def apply_defaults
+#puts "apply_defaults*****"+self.inspect
         return unless self.respond_to?(:new_document?) && new_document?
         return unless self.class.respond_to?(:properties) 
         return if self.class.properties.empty?
@@ -24,9 +26,10 @@ module CouchRest
         self.class.properties.each do |property|
           key = property.name.to_s
           # let's make sure we have a default and we can assign the value
-          if property.default && (self.respond_to?("#{key}=") || self.key?(key))
+          if property.default && (self.respond_to?("#{key}=") || self.has_key?(key))
               if property.default.class == Proc
                 self[key] = property.default.call
+#puts "apply_defaults*****:#{property.name}:#{self.class.name}:#{self.respond_to?("#{key}=".to_sym)}:#{self[key].class.name}"
               else
                 self[key] = Marshal.load(Marshal.dump(property.default))
               end
@@ -36,37 +39,13 @@ module CouchRest
       
       def cast_keys
         return unless self.class.properties
+#puts "cast_keys*****"+self.class.properties.map{|i|i.name}.join(',')
         self.class.properties.each do |property|
-          next unless property.casted
           key = self.has_key?(property.name) ? property.name : property.name.to_sym
-          target = property.type
-          if target.is_a?(Array)
-            next unless self[key]
-            klass = ::CouchRest.constantize(target[0])
-            self[property.name] = self[key].collect do |value|
-              # Auto parse Time objects
-              obj = ( (property.init_method == 'new') && klass == Time) ? Time.parse(value) : klass.send(property.init_method, value)
-              obj.casted_by = self if obj.respond_to?(:casted_by)
-              obj
-            end
-          else
-            # Auto parse Time objects
-            self[property.name] = if ((property.init_method == 'new') && target == 'Time') 
-              self[key].is_a?(String) ? Time.parse(self[key].dup) : self[key]
-            else
-              # Let people use :send as a Time parse arg
-              klass = ::CouchRest.constantize(target)
-              # I'm not convince we should or should not create a new instance if we are casting a doc/extended doc without default value and nothing was passed
-              # unless (property.casted && 
-              #   (klass.superclass == CouchRest::ExtendedDocument || klass.superclass == CouchRest::Document) && 
-              #     (self[key].nil? || property.default.nil?))
-              klass.send(property.init_method, self[key])
-              #end
-            end
-            self[property.name].casted_by = self if self[property.name].respond_to?(:casted_by)
-          end
+          self[key] = self.class.cast_property(key, self[key], self)
         end
       end
+          
       
       module ClassMethods
         
@@ -75,6 +54,45 @@ module CouchRest
           if existing_property.nil? || (existing_property.default != options[:default])
             define_property(name, options)
           end
+        end
+        def cast_property(property_name, input_value, requesting_casting_type)
+            return input_value unless input_value
+#puts "cast_property:#{property_name}:#{input_value.inspect}:#{self.properties.map{|i|i.name}.join(',')}"
+            property = self.properties.find {|i| i.name.to_s == property_name.to_s}
+            return input_value unless property
+            return input_value unless property.casted
+            target = property.type
+#puts "++++"+target.inspect
+            if target.kind_of?(Array)
+              klass = ::CouchRest.constantize(target[0])
+              input_value ||= []
+              ret = input_value.collect do |value|
+                # Auto parse Time objects
+                obj = ( (property.init_method == 'new') && klass == Time) ? Time.parse(value) : klass.send(property.init_method, value)
+                obj.casted_by = self if obj.respond_to?(:casted_by)
+                obj
+              end
+            else
+              # Auto parse Time objects
+              ret = if ((property.init_method == 'new') && target == 'Time') 
+                x = input_value.is_a?(String) ? Time.parse(input_value.dup) : input_value
+#puts "XXXX-1#{input_value}:#{x.inspect}"
+                x
+              else
+                # Let people use :send as a Time parse arg
+                klass = ::CouchRest.constantize(target)
+                # I'm not convince we should or should not create a new instance if we are casting a doc/extended doc without default value and nothing was passed
+                # unless (property.casted && 
+                #   (klass.superclass == CouchRest::ExtendedDocument || klass.superclass == CouchRest::Document) && 
+                #     (self[key].nil? || property.default.nil?))
+#puts "****#{klass.inspect}#{property.init_method}"
+                klass.send(property.init_method, input_value)
+                #end
+              end
+              ret.casted_by = requesting_casting_type if ret.respond_to?(:casted_by)
+            end
+#puts "======#{ret.inspect}"
+            ret
         end
         
         protected
@@ -88,6 +106,7 @@ module CouchRest
             create_property_getter(property) 
             create_property_setter(property) unless property.read_only == true
             properties << property
+#puts "!!!!!!!!!#{properties.inspect}"
           end
           
           # defines the getter for the property (and optional aliases)
