@@ -58,14 +58,15 @@ module CouchRest
             return input_value unless property
             return input_value unless property.casted
             target = property.type
-            if target.kind_of?(Array)
+            if target.respond_to?(:push)
               klass = ::CouchRest.constantize(target[0])
               input_value ||= []
-              ret = input_value.collect do |value|
+              ret = target.class.new
+              input_value.each do |value|
                 # Auto parse Time objects
                 obj = ( (property.init_method == 'new') && klass == Time) ? Time.parse(value) : klass.send(property.init_method, value)
                 obj.casted_by = self if obj.respond_to?(:casted_by)
-                obj
+                ret.push(obj)
               end
             else
               # Auto parse Time objects

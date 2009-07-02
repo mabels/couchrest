@@ -25,7 +25,8 @@ module CouchRest
             @type = [type.first.to_s]
           end
         elsif type.kind_of?(Hash)
-          @type = [type.values.first]
+          @type = Kernel.const_get(type.keys.first).new()
+          @type.push(type.values.first)
         else
           @type = type.to_s
         end
