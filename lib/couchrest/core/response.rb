@@ -4,7 +4,6 @@ module CouchRest
     attr_reader :attributes
  
     def initialize(pkeys = {})
-#puts "Response::Response #{self.class.name}:#{pkeys.inspect}"
       @attributes ||= {}
       pkeys ||= {}
       pkeys.each do |k,v|
@@ -12,14 +11,12 @@ module CouchRest
       end
     end
     def []=(key, value)
-      #super(key.to_s, value)
-        @attributes ||= {}
-        @attributes[key.to_sym] = value
+      @attributes ||= {}
+      @attributes[key.to_sym] = value
     end
     def [](key)
-         @attributes ||= {}
-         @attributes[key.to_sym]
-      #super(key.to_s)
+      @attributes ||= {}
+      @attributes[key.to_sym]
     end
     def has_key?(key)
       @attributes ||= {}

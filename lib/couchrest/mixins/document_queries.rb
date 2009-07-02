@@ -33,9 +33,7 @@ module CouchRest
         
         # Load a document from the database by id
         def get(id, db = database)
-#puts "Mixins::DocumentQueries::ClassMethods::get:#{self.class.name}"
-          doc = db.get id, {}, self.name
-          #new(doc)
+          db.get id, {}, self.name
         end
         
       end

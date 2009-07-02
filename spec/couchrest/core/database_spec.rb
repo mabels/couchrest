@@ -435,10 +435,8 @@ describe CouchRest::Database do
     end
     it "should save with url id" do
       doc = @db.get(@docid)
-#puts "****"+doc.inspect
       doc['yaml'] = ['json', 'word.']
       @db.save_doc doc
-#puts "++++"+doc.inspect
       @db.get(@docid)['yaml'].should == ['json', 'word.']
     end
     it "should fail to resave without the rev" do

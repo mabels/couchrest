@@ -21,7 +21,6 @@ module CouchRest
         end
       EOS
     end
-    
 
     # Accessors
     attr_accessor :casted_by

@@ -3,36 +3,18 @@ require 'delegate'
 module CouchRest  
   class Document < Response
     include CouchRest::Mixins::Attachments
-#   
-
-#    def initialize(a={})
-#      a[:private] || throw("NO NEW ALLOWED")
-#    end
-#public
-    # def self.inherited(subklass)
-    #   subklass.send(:extlib_inheritable_accessor, :database)
-    # end
 
     def self.build(doc, model_typ = nil, level = 'root') 
-#puts "BUILDER ENTER:#{level}:#{doc}#{doc.inspect}"
       if doc['couchrest-type'] != nil || (model_typ && !model_typ.empty?)
         my = Kernel.const_get(doc['couchrest-type'] || model_typ).new()
       else
         my = Document.new()
       end
-#puts "BUILDER:*****#{my.class.name}:#{self.class.name}"      
       doc.each do |k,v|
-    #puts "k=#{k} v=#{v.inspect}"
-    #    case v
-    #      when Hash then my[k] = self.build(v, nil, k)
-    #    else 
           my[k] = my.class.respond_to?(:cast_property) ? my.class.cast_property(k,v, my) : v
-    #    end
       end
-#puts "BUILDER LEAVE:#{level}"
       my
     end
-
     
     extlib_inheritable_accessor :database
     attr_accessor :database
@@ -49,13 +31,11 @@ module CouchRest
     end
     
     def rev
-#puts "CouchRest:Document:rev:"+self.inspect
       self['_rev']
     end
     
     # returns true if the document has never been saved
     def new_document?
-#puts "CouchRest:Document:new_document?:"+self.inspect
       !rev
     end
     
