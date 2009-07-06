@@ -7,7 +7,7 @@ module CouchRest
     def initialize(pkeys = {})
       @attributes ||= {}
       pkeys ||= {}
-      @document = @pkeys.delete(:document)
+      @document = pkeys.delete(:document)
       pkeys.each do |k,v|
         @attributes[k.to_sym] = v
       end
