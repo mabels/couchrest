@@ -2,9 +2,11 @@ module CouchRest
   class Response 
 
     attr_reader :attributes
+    attr_reader :document
  
     def initialize(pkeys = {})
       @attributes ||= {}
+      @document = @attributes.delete(:document)
       pkeys ||= {}
       pkeys.each do |k,v|
         @attributes[k.to_sym] = v
