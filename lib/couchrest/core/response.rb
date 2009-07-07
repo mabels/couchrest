@@ -1,15 +1,14 @@
 module CouchRest
   class Response 
+    include CouchRest::Parent
 
     attr_reader :attributes
-    attr_reader :document
  
     def initialize(pkeys = {})
       @attributes ||= {}
-      pkeys ||= {}
-      @document = pkeys.delete(:document)
-      pkeys.each do |k,v|
-        @attributes[k.to_sym] = v
+      @parent = pkeys.delete(:parent)
+      pkeys.each do |k,v| 
+        @attributes[k.to_sym] = v 
       end
     end
     def []=(key, value)

@@ -1,5 +1,5 @@
 module CouchRest
-  
+
   # Basic attribute support for adding getter/setter + validation
   class Property
     attr_reader :name, :type, :read_only, :alias, :default, :casted, :init_method, :options
@@ -18,11 +18,11 @@ module CouchRest
       def parse_type(type)
         if type.nil?
           @type = 'String'
-        elsif type.kind_of?(Array) 
+        elsif type.kind_of?(::Array) 
           if type.empty? 
             @type = type.class.name
           else
-            @type = [type.first.to_s]
+            @type = ::CouchRest::Array.new([type.first.to_s])
           end
         elsif type.kind_of?(Hash)
           @type = Kernel.const_get(type.keys.first).new()

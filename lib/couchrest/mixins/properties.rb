@@ -2,6 +2,7 @@ require 'time'
 require File.join(File.dirname(__FILE__), '..', 'more', 'property')
 
 module CouchRest
+
   module Mixins
     module Properties
       
@@ -30,6 +31,7 @@ module CouchRest
               else
                 self[key] = Marshal.load(Marshal.dump(property.default))
               end
+              self[key].respond_to?('parent=') && self[key].parent = self
             end
         end
       end
@@ -65,7 +67,8 @@ module CouchRest
               input_value.each do |value|
                 # Auto parse Time objects
                 obj = ( (property.init_method == 'new') && klass == Time) ? Time.parse(value) : klass.send(property.init_method, value)
-                obj.casted_by = self if obj.respond_to?(:casted_by)
+                obj.casted_by = self if obj.respond_to?('casted_by=')
+                obj.parent = ret if obj.respond_to?('parent=')
                 ret.push(obj)
               end
             else
@@ -82,8 +85,9 @@ module CouchRest
                 klass.send(property.init_method, input_value)
                 #end
               end
-              ret.casted_by = requesting_casting_type if ret.respond_to?(:casted_by)
+              ret.casted_by = requesting_casting_type if ret.respond_to?('casted_by=')
             end
+            ret.parent = requesting_casting_type if ret.respond_to?('parent=')
             ret
         end
         

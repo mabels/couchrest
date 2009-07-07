@@ -3,6 +3,7 @@ require File.join(FIXTURE_PATH, 'more', 'card')
 
 class WithCastedModelMixin < Hash
   include CouchRest::CastedModel
+  include CouchRest::Parent
   property :name
 end
 
@@ -11,6 +12,7 @@ class DummyModel < CouchRest::ExtendedDocument
   raise "Default DB not set" if TEST_SERVER.default_database.nil?
   property :casted_attribute, :cast_as => 'WithCastedModelMixin'
   property :keywords,         :cast_as => ["String"]
+  property :subs,             :cast_as => ["WithCastedModelMixin"], :default => lambda { CouchRest::Array.new() }
 end
 
 describe CouchRest::CastedModel do
@@ -40,6 +42,8 @@ describe CouchRest::CastedModel do
   describe "casted as attribute" do
     before(:each) do
       @obj = DummyModel.new(:casted_attribute => {:name => 'whatever'})
+      @obj.subs.push(WithCastedModelMixin.new())
+      @obj.subs << WithCastedModelMixin.new()
       @casted_obj = @obj.casted_attribute
     end
     
@@ -54,6 +58,29 @@ describe CouchRest::CastedModel do
     it "should know who casted it" do
       @casted_obj.casted_by.should == @obj
     end
+
+    it "should know as typ of CouchRest::Array" do
+      @obj.subs.should be_a_kind_of(CouchRest::Array)
+    end
+
+    it "should have a parent" do
+      @obj.subs.parent.should be_a_kind_of(DummyModel)
+    end
+
+    it "should have a document" do
+      @obj.subs.document.should be_a_kind_of(DummyModel)
+    end
+
+    it "should have a document on subs item" do
+      @obj.subs[0].document.should be_a_kind_of(DummyModel)
+      @obj.subs[1].document.should be_a_kind_of(DummyModel)
+    end
+
+    it "should have a parent on subs item" do
+      @obj.subs[0].parent.should be_a_kind_of(CouchRest::Array)
+      @obj.subs[1].parent.should be_a_kind_of(CouchRest::Array)
+    end
+
   end
   
   describe "casted as an array of a different type" do
@@ -62,7 +89,7 @@ describe CouchRest::CastedModel do
     end
     
     it "should cast the array propery" do
-      @obj.keywords.should be_an_instance_of(Array)
+      @obj.keywords.should be_an_kind_of(Array)
       @obj.keywords.first.should == 'couch'
     end
     
