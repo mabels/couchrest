@@ -50,6 +50,12 @@ describe CouchRest::CastedModel do
     it "should be available from its parent" do
       @casted_obj.should be_an_instance_of(WithCastedModelMixin)
     end
+
+    it "should update the parent if you use update_with_attribute" do
+      @obj.update_attributes_without_saving(:casted_attribute => (oid = WithCastedModelMixin.new()))
+      @obj.casted_attribute.parent.should == @obj
+      @obj.casted_attribute.object_id.should == oid.object_id
+    end
     
     it "should have the getters defined" do
       @casted_obj.name.should == 'whatever'

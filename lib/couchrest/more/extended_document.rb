@@ -106,6 +106,7 @@ module CouchRest
       end      
       hash.each do |k, v|
         self.send("#{k}=",v)
+        v.parent = self if v.respond_to?('parent=')
       end
     end
 
