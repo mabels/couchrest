@@ -24,12 +24,11 @@ spec = Gem::Specification.new do |s|
   s.description = "CouchRest provides a simple interface on top of CouchDB's RESTful HTTP API, as well as including some utility scripts for managing views and attachments."
   s.has_rdoc = true
   s.authors = ["J. Chris Anderson", "Matt Aimonetti"]
-  s.files = %w( LICENSE README.md Rakefile THANKS.md ) + 
+  s.files = %w( LICENSE README.md Rakefile THANKS.md history.txt) + 
     Dir["{examples,lib,spec,utils}/**/*"] - 
     Dir["spec/tmp"]
   s.extra_rdoc_files = %w( README.md LICENSE THANKS.md )
   s.require_path = "lib"
-  s.add_dependency("json", ">= 1.1.2")
   s.add_dependency("rest-client", ">= 0.5")
   s.add_dependency("mime-types", ">= 1.15")
 end

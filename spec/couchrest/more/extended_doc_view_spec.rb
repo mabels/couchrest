@@ -100,7 +100,8 @@ describe "ExtendedDocument views" do
 
   describe "a ducktype view" do
     before(:all) do
-      @id = TEST_SERVER.default_database.save_doc({:dept => true})['id']
+      reset_test_db!
+      @id = DB.save_doc({:dept => true})['id']
     end
     it "should setup" do
       duck = Course.get(@id) # from a different db
@@ -111,7 +112,7 @@ describe "ExtendedDocument views" do
       @doc = Course.design_doc
       @doc["views"]["by_dept"]["map"].should_not include("couchrest")
     end
-    it "should not look for class" do |variable|
+    it "should not look for class" do
       @as = Course.by_dept
       @as[0]['_id'].should == @id
     end
@@ -120,7 +121,7 @@ describe "ExtendedDocument views" do
   describe "a model class not tied to a database" do
     before(:all) do
       reset_test_db!
-      @db = TEST_SERVER.default_database
+      @db = DB 
       %w{aaa bbb ddd eee}.each do |title|
         u = Unattached.new(:title => title)
         u.database = @db
@@ -132,14 +133,15 @@ describe "ExtendedDocument views" do
       lambda{Unattached.all}.should raise_error
     end
     it "should query all" do
-      rs = Unattached.all :database=>@db
+      Unattached.cleanup_design_docs!(@db)
+      rs = Unattached.all :database => @db
       rs.length.should == 4
     end
     it "should barf on query if no database given" do
       lambda{Unattached.view :by_title}.should raise_error
     end
     it "should make the design doc upon first query" do
-      Unattached.by_title :database=>@db
+      Unattached.by_title :database => @db
       doc = Unattached.design_doc
       doc['views']['all']['map'].should include('Unattached')
     end
@@ -156,7 +158,7 @@ describe "ExtendedDocument views" do
       things = []
       Unattached.view(:by_title, :database=>@db) do |thing|
         things << thing
-      end
+      end 
       things[0]["doc"]["title"].should =='aaa'
     end
     it "should yield with by_key method" do
@@ -166,8 +168,11 @@ describe "ExtendedDocument views" do
       end
       things[0]["doc"]["title"].should =='aaa'
     end
-    it "should barf on get if no database given" do
-      lambda{Unattached.get("aaa")}.should raise_error
+    it "should return nil on get if no database given" do
+      Unattached.get("aaa").should be_nil
+    end
+    it "should barf on get! if no database given" do
+      lambda{Unattached.get!("aaa")}.should raise_error
     end
     it "should get from specific database" do
       u = Unattached.get(@first_id, @db)
@@ -183,21 +188,23 @@ describe "ExtendedDocument views" do
     it "should barf on all_design_doc_versions if no database given" do
       lambda{Unattached.all_design_doc_versions}.should raise_error
     end
-    it "should clean up design docs left around on specific database" do
-      Unattached.by_title :database=>@db
-      Unattached.all_design_doc_versions(@db)["rows"].length.should == 1
+    it "should be able to cleanup the db/bump the revision number" do
+      # if the previous specs were not run, the model_design_doc will be blank
+      Unattached.use_database DB
       Unattached.view_by :questions
-      Unattached.by_questions :database=>@db
-      Unattached.all_design_doc_versions(@db)["rows"].length.should == 2
+      Unattached.by_questions(:database => @db)
+      original_revision = Unattached.model_design_doc(@db)['_rev']
       Unattached.cleanup_design_docs!(@db)
-      Unattached.all_design_doc_versions(@db)["rows"].length.should == 1
+      Unattached.model_design_doc(@db)['_rev'].should_not == original_revision
     end
   end
 
   describe "class proxy" do
     before(:all) do
       reset_test_db!
-      @us = Unattached.on(TEST_SERVER.default_database)
+      # setup the class default doc to save the design doc
+      Unattached.use_database nil # just to be sure it is really unattached
+      @us = Unattached.on(DB)
       %w{aaa bbb ddd eee}.each do |title|
         u = @us.new(:title => title)
         u.save
@@ -207,6 +214,9 @@ describe "ExtendedDocument views" do
     it "should query all" do
       rs = @us.all
       rs.length.should == 4
+    end
+    it "should count" do
+      @us.count.should == 4
     end
     it "should make the design doc upon first query" do
       @us.by_title
@@ -246,18 +256,15 @@ describe "ExtendedDocument views" do
     end
     it "should clean up design docs left around on specific database" do
       @us.by_title
-      @us.all_design_doc_versions["rows"].length.should == 1
+      original_id = @us.model_design_doc['_rev']
       Unattached.view_by :professor
       @us.by_professor
-      @us.all_design_doc_versions["rows"].length.should == 2
-      @us.cleanup_design_docs!
-      @us.all_design_doc_versions["rows"].length.should == 1
+      @us.model_design_doc['_rev'].should_not == original_id
     end
   end
 
   describe "a model with a compound key view" do
     before(:all) do
-      Article.design_doc_fresh = false
       Article.by_user_id_and_date.each{|a| a.destroy(true)}
       Article.database.bulk_delete
       written_at = Time.now - 24 * 3600 * 7
@@ -321,6 +328,7 @@ describe "ExtendedDocument views" do
     before(:each) do
       reset_test_db!
       Article.by_date
+      @original_doc_rev = Article.model_design_doc['_rev']
       @design_docs = Article.database.documents :startkey => "_design/", :endkey => "_design/\u9999"
     end
     it "should not create a design doc on view definition" do
@@ -332,24 +340,87 @@ describe "ExtendedDocument views" do
       ddocs = Article.all_design_doc_versions["rows"].length
       Article.view_by :updated_at
       Article.by_updated_at
-      Article.all_design_doc_versions["rows"].length.should == ddocs + 1
+      @original_doc_rev.should_not == Article.model_design_doc['_rev']
       Article.design_doc["views"].keys.should include("by_updated_at")
     end
   end
 
-  describe "with a lot of designs left around" do
-    before(:each) do
+  describe "with a collection" do
+    before(:all) do
       reset_test_db!
-      Article.by_date
-      Article.view_by :field
-      Article.by_field
+      @titles = ["very uniq one", "really interesting", "some fun",
+        "really awesome", "crazy bob", "this rocks", "super rad"]
+      @titles.each_with_index do |title,i|
+        a = Article.new(:title => title, :date => Date.today)
+        a.save
+      end
     end
-    it "should clean them up" do
-      Article.view_by :stream
-      Article.by_stream
-      Article.all_design_doc_versions["rows"].length.should > 1
-      Article.cleanup_design_docs!
-      Article.all_design_doc_versions["rows"].length.should == 1
+    it "should return a proxy that looks like an array of 7 Article objects" do
+      articles = Article.by_date :key => Date.today
+      articles.class.should == Array
+      articles.size.should == 7
+    end
+    it "should get a subset of articles using paginate" do
+      articles = Article.by_date :key => Date.today
+      articles.paginate(:page => 1, :per_page => 3).size.should == 3
+      articles.paginate(:page => 2, :per_page => 3).size.should == 3
+      articles.paginate(:page => 3, :per_page => 3).size.should == 1
+    end
+    it "should get all articles, a few at a time, using paginated each" do
+      articles = Article.by_date :key => Date.today
+      articles.paginated_each(:per_page => 3) do |a|
+        a.should_not be_nil
+      end
+    end 
+    it "should have the amount of paginated pages" do
+      articles = Article.by_date :key => Date.today
+      articles.paginate(:per_page => 3) 
+      articles.amount_pages.should == 3
+    end
+    it "should provide a class method to access the collection directly" do
+      articles = Article.collection_proxy_for('Article', 'by_date', :descending => true,
+        :key => Date.today, :include_docs => true)
+      articles.class.should == Array
+      articles.size.should == 7
+    end
+    it "should provide a class method for paginate" do
+      articles = Article.paginate(:design_doc => 'Article', :view_name => 'by_date',
+        :per_page => 3, :descending => true, :key => Date.today, :include_docs => true)
+      articles.size.should == 3
+
+      articles = Article.paginate(:design_doc => 'Article', :view_name => 'by_date',
+        :per_page => 3, :page => 2, :descending => true, :key => Date.today, :include_docs => true)
+      articles.size.should == 3
+
+      articles = Article.paginate(:design_doc => 'Article', :view_name => 'by_date',
+        :per_page => 3, :page => 3, :descending => true, :key => Date.today, :include_docs => true)
+      articles.size.should == 1
+    end
+    it "should provide a class method for paginated_each" do
+      options = { :design_doc => 'Article', :view_name => 'by_date',
+        :per_page => 3, :page => 1, :descending => true, :key => Date.today,
+        :include_docs => true }
+      Article.paginated_each(options) do |a|
+        a.should_not be_nil
+      end
+    end
+    it "should provide a class method to get a collection for a view" do
+      class Article
+        provides_collection :article_details, 'Article', 'by_date', :descending => true, :include_docs => true
+      end
+
+      articles = Article.find_all_article_details(:key => Date.today)
+      articles.class.should == Array
+      articles.size.should == 7
+    end
+    it "should raise an exception if design_doc is not provided" do
+      lambda{Article.collection_proxy_for(nil, 'by_date')}.should raise_error
+      lambda{Article.paginate(:view_name => 'by_date')}.should raise_error
+    end
+    it "should raise an exception if view_name is not provided" do
+      lambda{Article.collection_proxy_for('Article', nil)}.should raise_error
+      lambda{Article.paginate(:design_doc => 'Article')}.should raise_error
     end
   end
+
 end

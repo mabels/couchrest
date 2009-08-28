@@ -1,7 +1,7 @@
 # Extracted from dm-validations 0.9.10
 #
 # Copyright (c) 2007 Guy van den Berg
-# 
+#
 # Permission is hereby granted, free of charge, to any person obtaining
 # a copy of this software and associated documentation files (the
 # "Software"), to deal in the Software without restriction, including
@@ -9,10 +9,10 @@
 # distribute, sublicense, and/or sell copies of the Software, and to
 # permit persons to whom the Software is furnished to do so, subject to
 # the following conditions:
-# 
+#
 # The above copyright notice and this permission notice shall be
 # included in all copies or substantial portions of the Software.
-# 
+#
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 # EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 # MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -47,20 +47,20 @@ require File.join(dir, 'validators', 'confirmation_validator')
 
 module CouchRest
   module Validation
-    
+
     def self.included(base)
       base.extlib_inheritable_accessor(:auto_validation)
       base.class_eval <<-EOS, __FILE__, __LINE__
           # Turn off auto validation by default
           self.auto_validation ||= false
-          
+
           # Force the auto validation for the class properties
           # This feature is still not fully ported over,
           # test are lacking, so please use with caution
           def self.auto_validate!
             self.auto_validation = true
           end
-          
+
           # share the validations with subclasses
           def self.inherited(subklass)
             self.validators.contexts.each do |k, v|
@@ -69,7 +69,7 @@ module CouchRest
             super
           end
       EOS
-      
+
       base.extend(ClassMethods)
       base.class_eval <<-EOS, __FILE__, __LINE__
         if method_defined?(:_run_save_callbacks)
@@ -77,9 +77,9 @@ module CouchRest
         end
       EOS
       base.class_eval <<-RUBY_EVAL, __FILE__, __LINE__ + 1
-        def self.define_property(name, options={})
-          super
-          auto_generate_validations(properties.last) if properties && properties.size > 0
+        register_new_property_callback :setup_automatic_validations
+        def self.setup_automatic_validations(property)
+          auto_generate_validations(property)
           autovalidation_check = true
         end
       RUBY_EVAL
@@ -91,7 +91,7 @@ module CouchRest
     def check_validations(context = :default)
       throw(:halt, false) unless context.nil? || valid?(context)
     end
-    
+
     # Return the ValidationErrors
     #
     def errors
@@ -115,7 +115,22 @@ module CouchRest
     # Check if a resource is valid in a given context
     #
     def valid?(context = :default)
-      self.class.validators.execute(context, self)
+      result = self.class.validators.execute(context, self)
+      result && validate_casted_arrays
+    end
+
+    # checking on casted objects
+    def validate_casted_arrays
+      result = true
+      self.class.properties.values.each do |property|
+        next unless property.casted 
+        casted_values = self.send(property.name)
+        next unless casted_values.respond_to?(:each) 
+        casted_values.each do |value|
+          result = (result && value.valid?) if value.respond_to?(:valid?)
+        end
+      end
+      result
     end
 
     # Begin a recursive walk of the model checking validity
@@ -150,7 +165,7 @@ module CouchRest
 
     # Get the corresponding Object property, if it exists.
     def validation_property(field_name)
-      properties.find{|p| p.name == field_name}
+      properties[field_name.to_s]
     end
 
     module ClassMethods
@@ -167,13 +182,13 @@ module CouchRest
       # include CouchRest::Validation::ValidatesWithBlock
       # include CouchRest::Validation::ValidatesIsUnique
       include CouchRest::Validation::AutoValidate
-      
+
       # Return the set of contextual validators or create a new one
       #
       def validators
         @validations ||= ContextualValidators.new
       end
-      
+
       # Clean up the argument list and return a opts hash, including the
       # merging of any default opts. Set the context to default if none is
       # provided. Also allow :context to be aliased to :on, :when & group
@@ -189,7 +204,7 @@ module CouchRest
         opts.merge!(defaults) unless defaults.nil?
         opts
       end
-      
+
       # Given a new context create an instance method of
       # valid_for_<context>? which simply calls valid?(context)
       # if it does not already exist
@@ -235,7 +250,7 @@ module CouchRest
           end
         end
       end
-      
+
     end # module ClassMethods
   end # module Validation
 

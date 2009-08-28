@@ -16,8 +16,6 @@ module CouchRest
       # # This feature is still not fully ported over,
       # # test are lacking, so please use with caution
       # def auto_validate!
-      #   require 'ruby-debug'
-      #   debugger
       #   auto_validation = true
       # end
       
@@ -91,7 +89,7 @@ module CouchRest
       #       It is just shortcut if only one validation option is set
       #
       def auto_generate_validations(property)
-        return unless ((property.autovalidation_check != true) && self.auto_validation)
+        return unless ((property.autovalidation_check != true) && self.respond_to?(:auto_validation) && self.auto_validation)
         return if (property.options && (property.options.has_key?(:auto_validation) && !property.options[:auto_validation]) || property.read_only)
         # value is set by the storage system
         opts = {}
@@ -104,7 +102,7 @@ module CouchRest
         end
 
         # length
-        if property.type == "String"
+        if property.caster.result_class_name == 'String'
           # XXX: maybe length should always return a Range, with the min defaulting to 1
           # 52 being the max set 
           len = property.options.fetch(:length, property.options.fetch(:size, 52))
@@ -142,11 +140,11 @@ module CouchRest
         end
 
         # numeric validator
-        if "Integer" == property.type
+        if 'Integer' == property.caster.result_class_name
           opts[:integer_only] = true
           # validates_is_number property.name, opts
           validates_is_number property.name, options_with_message(opts, property, :is_number)
-        elsif Float == property.type
+        elsif 'Float' == property.caster.result_class_name
           opts[:precision] = property.precision
           opts[:scale]     = property.scale
           # validates_is_number property.name, opts

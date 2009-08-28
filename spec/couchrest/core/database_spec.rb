@@ -12,7 +12,8 @@ describe CouchRest::Database do
     it "should escape the name in the URI" do
       db = @cr.database("foo/bar")
       db.name.should == "foo/bar"
-      db.uri.should == "#{COUCHHOST}/foo%2Fbar"
+      db.root.should == "#{COUCHHOST}/foo%2Fbar"
+      db.uri.should  == "/foo%2Fbar"
     end
   end
 
@@ -367,8 +368,18 @@ describe CouchRest::Database do
     end
     it "should delete the attachment" do
       lambda { @db.fetch_attachment(@doc,'test.html') }.should_not raise_error
-      @db.delete_attachment(@doc, "test.html")
-      lambda { @db.fetch_attachment(@doc,'test.html') }.should raise_error(RestClient::ResourceNotFound)
+      @db.delete_attachment(@doc, "test.html")  
+      @doc = @db.get('mydocwithattachment') # avoid getting a 409
+      lambda{ @db.fetch_attachment(@doc,'test.html')}.should raise_error
+    end
+    
+    it "should force a delete even if we get a 409" do
+      @doc['new_attribute'] = 'something new'
+      @db.put_attachment(@doc, 'test', File.open(File.join(File.dirname(__FILE__), '..', '..', 'fixtures', 'attachments', 'test.html')).read)
+      # at this point the revision number changed, if we try to save doc one more time
+      # we would get a 409.
+      lambda{ @db.save_doc(@doc) }.should raise_error
+      lambda{ @db.delete_attachment(@doc, "test", true) }.should_not raise_error
     end
   end
 
@@ -602,7 +613,7 @@ describe CouchRest::Database do
     it "should have the bulk_load macro" do
       rs = @db.bulk_load ["doc0", "doc7"]
       rs['rows'].length.should == 2
-      ds['rows'][0]['doc']['another'].should == "doc"
+      rs['rows'][0]['doc']['another'].should == "doc"
     end
   end
   
@@ -689,7 +700,7 @@ describe CouchRest::Database do
     
     it "should recreate a db even tho it doesn't exist" do
       @cr.databases.should_not include(@db2.name)
-      @db2.recreate!
+      begin @db2.recreate! rescue nil end
       @cr.databases.should include(@db2.name)
     end
     

@@ -4,16 +4,18 @@ require File.join(FIXTURE_PATH, 'more', 'course')
 
 
 describe "ExtendedDocument" do
-  
+
   class WithDefaultValues < CouchRest::ExtendedDocument
     use_database TEST_SERVER.default_database
     property :preset,       :default => {:right => 10, :top_align => false}
     property :set_by_proc,  :default => Proc.new{Time.now},       :cast_as => 'Time'
     property :tags,         :default => []
+    property :read_only_with_default, :default => 'generic', :read_only => true
+    property :default_false, :default => false
     property :name
     timestamps!
   end
-  
+
   class WithCallBacks < CouchRest::ExtendedDocument
     use_database TEST_SERVER.default_database
     property :name
@@ -23,27 +25,27 @@ describe "ExtendedDocument" do
     property :run_after_create
     property :run_before_update
     property :run_after_update
-    
-    save_callback :before do |object| 
+
+    save_callback :before do |object|
       object.run_before_save = true
     end
-    save_callback :after do |object| 
+    save_callback :after do |object|
       object.run_after_save = true
     end
-    create_callback :before do |object| 
+    create_callback :before do |object|
       object.run_before_create = true
     end
-    create_callback :after do |object| 
+    create_callback :after do |object|
       object.run_after_create = true
     end
-    update_callback :before do |object| 
+    update_callback :before do |object|
       object.run_before_update = true
     end
-    update_callback :after do |object| 
+    update_callback :after do |object|
       object.run_after_update = true
     end
   end
-  
+
   class WithTemplateAndUniqueID < CouchRest::ExtendedDocument
     use_database TEST_SERVER.default_database
     unique_id do |model|
@@ -52,23 +54,36 @@ describe "ExtendedDocument" do
     property :preset, :default => 'value'
     property :has_no_default
   end
-  
+
+  class WithGetterAndSetterMethods < CouchRest::ExtendedDocument
+    use_database TEST_SERVER.default_database
+
+    property :other_arg
+    def arg
+      other_arg
+    end
+
+    def arg=(value)
+      self.other_arg = "foo-#{value}"
+    end
+  end
+
   before(:each) do
     @obj = WithDefaultValues.new
   end
-  
+
   describe "instance database connection" do
     it "should use the default database" do
       @obj.database.name.should == 'couchrest-test'
     end
-    
+
     it "should override the default db" do
       @obj.database = TEST_SERVER.database!('couchrest-extendedmodel-test')
       @obj.database.name.should == 'couchrest-extendedmodel-test'
       @obj.database.delete!
     end
   end
-  
+
   describe "a new model" do
     it "should be a new_record" do
       @obj = Basic.new
@@ -81,7 +96,23 @@ describe "ExtendedDocument" do
       @obj.should be_a_new_document
     end
   end
-  
+
+  describe "creating a new document" do
+    it "should instantialize and save a document" do
+      article = Article.create(:title => 'my test')
+      article.title.should == 'my test'
+      article.should_not be_new_document
+    end
+
+    it "should trigger the create callbacks" do
+      doc = WithCallBacks.create(:name => 'my other test')
+      doc.run_before_create.should be_true
+      doc.run_after_create.should be_true
+      doc.run_before_save.should be_true
+      doc.run_after_save.should be_true
+    end
+  end
+
   describe "update attributes without saving" do
     before(:each) do
       a = Article.get "big-bad-danger" rescue nil
@@ -94,21 +125,21 @@ describe "ExtendedDocument" do
       @art.update_attributes_without_saving('date' => Time.now, :title => "super danger")
       @art['title'].should == "super danger"
     end
-    
+
     it "should flip out if an attribute= method is missing" do
       lambda {
-        @art.update_attributes_without_saving('slug' => "new-slug", :title => "super danger")        
+        @art.update_attributes_without_saving('slug' => "new-slug", :title => "super danger")
       }.should raise_error
     end
-    
+
     it "should not change other attributes if there is an error" do
       lambda {
-        @art.update_attributes_without_saving('slug' => "new-slug", :title => "super danger")        
+        @art.update_attributes_without_saving('slug' => "new-slug", :title => "super danger")
       }.should raise_error
       @art['title'].should == "big bad danger"
     end
   end
-  
+
   describe "update attributes" do
     before(:each) do
       a = Article.get "big-bad-danger" rescue nil
@@ -123,29 +154,38 @@ describe "ExtendedDocument" do
       loaded['title'].should == "super danger"
     end
   end
-  
+
   describe "with default" do
     it "should have the default value set at initalization" do
       @obj.preset.should == {:right => 10, :top_align => false}
     end
-    
+
+    it "should have the default false value explicitly assigned" do
+      @obj.default_false.should == false
+    end
+
     it "should automatically call a proc default at initialization" do
       @obj.set_by_proc.should be_an_instance_of(Time)
       @obj.set_by_proc.should == @obj.set_by_proc
       @obj.set_by_proc.should < Time.now
     end
-    
+
     it "should let you overwrite the default values" do
       obj = WithDefaultValues.new(:preset => 'test')
       obj.preset = 'test'
     end
-    
+
     it "should work with a default empty array" do
       obj = WithDefaultValues.new(:tags => ['spec'])
       obj.tags.should == ['spec']
     end
+
+    it "should set default value of read-only property" do
+      obj = WithDefaultValues.new
+      obj.read_only_with_default.should == 'generic'
+    end
   end
-  
+
   describe "a doc with template values (CR::Model spec)" do
     before(:all) do
       WithTemplateAndUniqueID.all.map{|o| o.destroy(true)}
@@ -166,7 +206,7 @@ describe "ExtendedDocument" do
       tmpl2_reloaded.preset.should == 'not_value'
     end
   end
-  
+
   describe "getting a model" do
     before(:all) do
       @art = Article.new(:title => 'All About Getting')
@@ -175,6 +215,15 @@ describe "ExtendedDocument" do
     it "should load and instantiate it" do
       foundart = Article.get @art.id
       foundart.title.should == "All About Getting"
+    end
+
+    it "should return nil if `get` is used and the document doesn't exist" do
+      foundart = Article.get 'matt aimonetti'
+      foundart.should be_nil
+    end
+
+    it "should raise an error if `get!` is used and the document doesn't exist" do
+       lambda{foundart = Article.get!('matt aimonetti')}.should raise_error
     end
   end
 
@@ -202,9 +251,10 @@ describe "ExtendedDocument" do
       @course["questions"][0].a[0].should == "beast"
     end
   end
-  
+
   describe "finding all instances of a model" do
     before(:all) do
+      WithTemplateAndUniqueID.design_doc_fresh = false
       WithTemplateAndUniqueID.all.map{|o| o.destroy(true)}
       WithTemplateAndUniqueID.database.bulk_delete
       WithTemplateAndUniqueID.new('important-field' => '1').save
@@ -218,14 +268,34 @@ describe "ExtendedDocument" do
       d['views']['all']['map'].should include('WithTemplateAndUniqueID')
     end
     it "should find all" do
-      rs = WithTemplateAndUniqueID.all 
+      rs = WithTemplateAndUniqueID.all
       rs.length.should == 4
     end
   end
 
-  describe "finding the first instance of a model" do
-    before(:each) do      
+  describe "counting all instances of a model" do
+    before(:each) do
       @db = reset_test_db!
+      WithTemplateAndUniqueID.design_doc_fresh = false
+    end
+
+    it ".count should return 0 if there are no docuemtns" do
+      WithTemplateAndUniqueID.count.should == 0
+    end
+
+    it ".count should return the number of documents" do
+      WithTemplateAndUniqueID.new('important-field' => '1').save
+      WithTemplateAndUniqueID.new('important-field' => '2').save
+      WithTemplateAndUniqueID.new('important-field' => '3').save
+
+      WithTemplateAndUniqueID.count.should == 3
+    end
+  end
+
+  describe "finding the first instance of a model" do
+    before(:each) do
+      @db = reset_test_db!
+      WithTemplateAndUniqueID.design_doc_fresh = false
       WithTemplateAndUniqueID.new('important-field' => '1').save
       WithTemplateAndUniqueID.new('important-field' => '2').save
       WithTemplateAndUniqueID.new('important-field' => '3').save
@@ -245,7 +315,7 @@ describe "ExtendedDocument" do
       WithTemplateAndUniqueID.first.should be_nil
     end
   end
-  
+
   describe "getting a model with a subobject field" do
     before(:all) do
       course_doc = {
@@ -268,7 +338,7 @@ describe "ExtendedDocument" do
       @course['final_test_at'].should == Time.parse("2008/12/19 13:00:00 +0800")
     end
   end
-  
+
   describe "timestamping" do
     before(:each) do
       oldart = Article.get "saving-this" rescue nil
@@ -276,7 +346,7 @@ describe "ExtendedDocument" do
       @art = Article.new(:title => "Saving this")
       @art.save
     end
-    
+
     it "should define the updated_at and created_at getters and set the values" do
       @obj.save
       obj = WithDefaultValues.get(@obj.id)
@@ -284,7 +354,7 @@ describe "ExtendedDocument" do
       obj.created_at.should be_an_instance_of(Time)
       obj.updated_at.should be_an_instance_of(Time)
       obj.created_at.to_s.should == @obj.updated_at.to_s
-    end 
+    end
     it "should set the time on create" do
       (Time.now - @art.created_at).should < 2
       foundart = Article.get @art.id
@@ -295,7 +365,7 @@ describe "ExtendedDocument" do
       @art.created_at.should < @art.updated_at
     end
   end
-  
+
   describe "basic saving and retrieving" do
     it "should work fine" do
       @obj.name = "should be easily saved and retrieved"
@@ -303,7 +373,7 @@ describe "ExtendedDocument" do
       saved_obj = WithDefaultValues.get(@obj.id)
       saved_obj.should_not be_nil
     end
-    
+
     it "should parse the Time attributes automatically" do
       @obj.name = "should parse the Time attributes automatically"
       @obj.set_by_proc.should be_an_instance_of(Time)
@@ -313,52 +383,52 @@ describe "ExtendedDocument" do
       saved_obj.set_by_proc.should be_an_instance_of(Time)
     end
   end
-  
+
   describe "saving a model" do
     before(:all) do
       @sobj = Basic.new
       @sobj.save.should == true
     end
-    
+
     it "should save the doc" do
       doc = Basic.get(@sobj.id)
       doc['_id'].should == @sobj.id
     end
-    
+
     it "should be set for resaving" do
       rev = @obj.rev
       @sobj['another-key'] = "some value"
       @sobj.save
       @sobj.rev.should_not == rev
     end
-    
+
     it "should set the id" do
       @sobj.id.should be_an_instance_of(String)
     end
-    
+
     it "should set the type" do
       @sobj['couchrest-type'].should == 'Basic'
     end
   end
-  
+
   describe "saving a model with a unique_id configured" do
     before(:each) do
       @art = Article.new
       @old = Article.database.get('this-is-the-title') rescue nil
       Article.database.delete_doc(@old) if @old
     end
-    
+
     it "should be a new document" do
       @art.should be_a_new_document
       @art.title.should be_nil
     end
-    
+
     it "should require the title" do
       lambda{@art.save}.should raise_error
       @art.title = 'This is the title'
       @art.save.should == true
     end
-    
+
     it "should not change the slug on update" do
       @art.title = 'This is the title'
       @art.save.should == true
@@ -366,20 +436,20 @@ describe "ExtendedDocument" do
       @art.save.should == true
       @art.slug.should == 'this-is-the-title'
     end
-    
+
     it "should raise an error when the slug is taken" do
       @art.title = 'This is the title'
       @art.save.should == true
       @art2 = Article.new(:title => 'This is the title!')
       lambda{@art2.save}.should raise_error
     end
-    
+
     it "should set the slug" do
       @art.title = 'This is the title'
       @art.save.should == true
       @art.slug.should == 'this-is-the-title'
     end
-    
+
     it "should set the id" do
       @art.title = 'This is the title'
       @art.save.should == true
@@ -393,20 +463,20 @@ describe "ExtendedDocument" do
       @old = WithTemplateAndUniqueID.get('very-important') rescue nil
       @old.destroy if @old
     end
-    
+
     it "should require the field" do
       lambda{@templated.save}.should raise_error
       @templated['important-field'] = 'very-important'
       @templated.save.should == true
     end
-    
+
     it "should save with the id" do
       @templated['important-field'] = 'very-important'
       @templated.save.should == true
       t = WithTemplateAndUniqueID.get('very-important')
       t.should == @templated
     end
-    
+
     it "should not change the id on update" do
       @templated['important-field'] = 'very-important'
       @templated.save.should == true
@@ -415,20 +485,20 @@ describe "ExtendedDocument" do
       t = WithTemplateAndUniqueID.get('very-important')
       t.should == @templated
     end
-    
+
     it "should raise an error when the id is taken" do
       @templated['important-field'] = 'very-important'
       @templated.save.should == true
       lambda{WithTemplateAndUniqueID.new('important-field' => 'very-important').save}.should raise_error
     end
-    
+
     it "should set the id" do
       @templated['important-field'] = 'very-important'
       @templated.save.should == true
       @templated.id.should == 'very-important'
     end
   end
-  
+
   describe "destroying an instance" do
     before(:each) do
       @dobj = Basic.new
@@ -442,21 +512,21 @@ describe "ExtendedDocument" do
       @dobj.destroy
       @dobj.rev.should be_nil
       @dobj.id.should be_nil
-      @dobj.save.should == true 
+      @dobj.save.should == true
     end
     it "should make it go away" do
       @dobj.destroy
-      lambda{Basic.get(@dobj.id)}.should raise_error
+      lambda{Basic.get!(@dobj.id)}.should raise_error
     end
   end
-  
-  
+
+
   describe "callbacks" do
-    
+
     before(:each) do
       @doc = WithCallBacks.new
     end
-    
+
     describe "save" do
       it "should run the after filter after saving" do
         @doc.run_after_save.should be_nil
@@ -484,10 +554,10 @@ describe "ExtendedDocument" do
       end
     end
     describe "update" do
-      
+
       before(:each) do
         @doc.save
-      end      
+      end
       it "should run the before update filter when updating an existing document" do
         @doc.run_before_update.should be_nil
         @doc.update
@@ -503,7 +573,16 @@ describe "ExtendedDocument" do
         @doc.save
         @doc.run_before_update.should be_true
       end
-      
+
+    end
+  end
+
+  describe "getter and setter methods" do
+    it "should try to call the arg= method before setting :arg in the hash" do
+      @doc = WithGetterAndSetterMethods.new(:arg => "foo")
+      @doc['arg'].should be_nil
+      @doc[:arg].should be_nil
+      @doc.other_arg.should == "foo-foo"
     end
   end
 end

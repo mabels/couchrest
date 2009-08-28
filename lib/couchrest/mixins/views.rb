@@ -72,7 +72,7 @@ module CouchRest
         #  
         # To understand the capabilities of this view system more completely,
         # it is recommended that you read the RSpec file at
-        # <tt>spec/core/model_spec.rb</tt>.
+        # <tt>spec/couchrest/more/extended_doc_spec.rb</tt>.
 
         def view_by(*keys)
           opts = keys.pop if keys.last.is_a?(Hash)
@@ -95,35 +95,35 @@ module CouchRest
 
         # Dispatches to any named view.
         def view(name, query={}, &block)
-          unless design_doc_fresh
-            refresh_design_doc
+          db = query.delete(:database) || database
+          unless design_doc_fresh            
+            refresh_design_doc_on(db)
           end
           query[:raw] = true if query[:reduce]        
-          db = query.delete(:database) || database
           raw = query.delete(:raw)
           fetch_view_with_docs(db, name, query, raw, &block)
         end
 
+        # DEPRECATED
+        # user model_design_doc to retrieve the current design doc
         def all_design_doc_versions(db = database)
-          db.documents :startkey => "_design/#{self.to_s}-", 
+          db.documents :startkey => "_design/#{self.to_s}", 
             :endkey => "_design/#{self.to_s}-\u9999"
         end
+        
+        def model_design_doc(db = database)
+          begin
+            @model_design_doc = db.get("_design/#{self.to_s}")
+          rescue
+            nil
+          end
+        end
 
-        # Deletes any non-current design docs that were created by this class. 
-        # Running this when you're deployed version of your application is steadily 
-        # and consistently using the latest code, is the way to clear out old design 
-        # docs. Running it to early could mean that live code has to regenerate
+        # Deletes the current design doc for the current class.
+        # Running it to early could mean that live code has to regenerate
         # potentially large indexes.
         def cleanup_design_docs!(db = database)
-          ddocs = all_design_doc_versions(db)
-          ddocs["rows"].each do |row|
-            if (row['id'] != design_doc_id)
-              db.delete_doc({
-                "_id" => row['id'],
-                "_rev" => row['value']['rev']
-              })
-            end
-          end
+          save_design_doc_on(db)
         end
 
         private
@@ -133,8 +133,12 @@ module CouchRest
             fetch_view(db, name, opts, &block)
           else
             begin
-              view = fetch_view db, name, opts.merge({:include_docs => true}), &block
-              view['rows'].collect{|r|new(r['doc'])} if view['rows']
+              if block.nil?
+                collection_proxy_for(design_doc, name, opts.merge({:include_docs => true}))
+              else
+                view = fetch_view db, name, opts.merge({:include_docs => true}), &block
+                view['rows'].collect{|r|new(r['doc'])} if view['rows']
+              end
             rescue
               # fallback for old versions of couchdb that don't 
               # have include_docs support
@@ -150,7 +154,7 @@ module CouchRest
           begin
             design_doc.view_on(db, view_name, opts, &block)
             # the design doc may not have been saved yet on this database
-          rescue RestClient::ResourceNotFound => e
+          rescue HttpAbstraction::ResourceNotFound => e
             if retryable
               save_design_doc_on(db)
               retryable = false

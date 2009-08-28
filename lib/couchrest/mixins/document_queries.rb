@@ -14,7 +14,14 @@ module CouchRest
         def all(opts = {}, &block)
           view(:all, opts, &block)
         end
-
+        
+        # Returns the number of documents that have the "couchrest-type" field
+        # equal to the name of the current class. Takes the standard set of 
+        # CouchRest::Database#view options
+        def count(opts = {}, &block)
+          all({:raw => true, :limit => 0}.merge(opts), &block)['total_rows']
+        end
+        
         # Load the first document that have the "couchrest-type" field equal to
         # the name of the current class.
         #
@@ -32,8 +39,40 @@ module CouchRest
         end
         
         # Load a document from the database by id
+        # No exceptions will be raised if the document isn't found
+        #
+        # ==== Returns
+        # Object:: if the document was found
+        # or
+        # Nil::
+        # 
+        # === Parameters
+        # id<String, Integer>:: Document ID
+        # db<Database>:: optional option to pass a custom database to use
         def get(id, db = database)
-          db.get id, {}, self.name
+          begin
+            doc = db.get id
+          rescue
+            nil
+          else
+            new(doc)
+          end
+        end
+        
+        # Load a document from the database by id
+        # An exception will be raised if the document isn't found
+        #
+        # ==== Returns
+        # Object:: if the document was found
+        # or
+        # Exception
+        # 
+        # === Parameters
+        # id<String, Integer>:: Document ID
+        # db<Database>:: optional option to pass a custom database to use
+        def get!(id, db = database)
+          doc = db.get id
+          new(doc)
         end
         
       end

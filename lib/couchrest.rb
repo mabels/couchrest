@@ -12,23 +12,23 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-require "rubygems"
-gem 'json'
-require 'json'
-gem 'rest-client'
+require 'rubygems'
+begin
+  require 'json'
+rescue LoadError
+  raise "You need install and require your own json compatible library since couchrest rest couldn't load the json/json_pure gem" unless Kernel.const_defined?("JSON")
+end
 require 'rest_client'
 
 $:.unshift File.dirname(__FILE__) unless
   $:.include?(File.dirname(__FILE__)) ||
   $:.include?(File.expand_path(File.dirname(__FILE__)))
-  
-$COUCHREST_DEBUG ||= false
-  
+    
 require 'couchrest/monkeypatches'
 
 # = CouchDB, close to the metal
 module CouchRest
-  VERSION    = '0.23' unless self.const_defined?("VERSION")
+  VERSION    = '0.32' unless self.const_defined?("VERSION")
   
   autoload :Server,       'couchrest/core/server'
   autoload :Database,     'couchrest/core/database'
@@ -47,7 +47,13 @@ module CouchRest
   autoload :ExtendedDocument,     'couchrest/more/extended_document'
   autoload :CastedModel,          'couchrest/more/casted_model'
   
+  require File.join(File.dirname(__FILE__), 'couchrest', 'core', 'rest_api')
+  require File.join(File.dirname(__FILE__), 'couchrest', 'core', 'http_abstraction')
   require File.join(File.dirname(__FILE__), 'couchrest', 'mixins')
+
+  # we extend CouchRest with the RestAPI module which gives us acess to
+  # the get, post, put, delete and copy
+  CouchRest.extend(::RestAPI)
   
   # The CouchRest module methods handle the basic JSON serialization 
   # and deserialization, as well as query parameters. The module also includes
@@ -120,9 +126,9 @@ module CouchRest
       }
     end
 
-    # set proxy for RestClient to use
+    # set proxy to use
     def proxy url
-      RestClient.proxy = url
+      HttpAbstraction.proxy = url
     end
 
     # ensure that a database exists
@@ -140,52 +146,6 @@ module CouchRest
       cr.database(parsed[:database])
     end
     
-    def put(uri, doc = nil)
-      payload = doc.to_json if doc
-      begin
-        JSON.parse(RestClient.put(uri, payload))
-      rescue Exception => e
-        if $COUCHREST_DEBUG == true
-          raise "Error while sending a PUT request #{uri}\npayload: #{payload.inspect}\n#{e}"
-        else
-          raise e
-        end
-      end
-    end
-
-    def get(uri)
-      begin
-        JSON.parse(RestClient.get(uri), :max_nesting => false)
-      rescue => e
-        if $COUCHREST_DEBUG == true
-          raise "Error while sending a GET request #{uri}\n: #{e}"
-        else
-          raise e
-        end
-      end
-    end
-  
-    def post uri, doc = nil
-      payload = doc.to_json if doc
-      begin
-        JSON.parse(RestClient.post(uri, payload))
-      rescue Exception => e
-        if $COUCHREST_DEBUG == true
-          raise "Error while sending a POST request #{uri}\npayload: #{payload.inspect}\n#{e}"
-        else
-          raise e
-        end
-      end
-    end
-  
-    def delete uri
-      JSON.parse(RestClient.delete(uri))
-    end
-    
-    def copy uri, destination
-      JSON.parse(RestClient.copy(uri, {'Destination' => destination}))
-    end
-  
     def paramify_url url, params = {}
       if params && !params.empty?
         query = params.collect do |k,v|

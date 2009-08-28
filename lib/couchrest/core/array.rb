@@ -16,5 +16,5 @@ module CouchRest
      a.each { |b| b.respond_to?('parent=') && b.parent = self }
     end
   end
-  
+
 end

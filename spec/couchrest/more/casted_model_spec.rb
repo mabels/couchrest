@@ -1,10 +1,18 @@
+# encoding: utf-8
+
 require File.join(File.dirname(__FILE__), '..', '..', 'spec_helper')
 require File.join(FIXTURE_PATH, 'more', 'card')
+require File.join(FIXTURE_PATH, 'more', 'cat')
+require File.join(FIXTURE_PATH, 'more', 'person')
+
 
 class WithCastedModelMixin < Hash
   include CouchRest::CastedModel
   include CouchRest::Parent
   property :name
+  property :no_value
+  property :details,          :default => {}
+  property :casted_attribute, :cast_as => 'WithCastedModelMixin'
 end
 
 class DummyModel < CouchRest::ExtendedDocument
@@ -37,11 +45,28 @@ describe CouchRest::CastedModel do
       @obj.name = 'Matt'
       @obj.name.should == 'Matt' 
     end
+    
+    it "should allow override of default" do
+      @obj = WithCastedModelMixin.new(:name => 'Eric', :details => {'color' => 'orange'})
+      @obj.name.should == 'Eric'
+      @obj.details['color'].should == 'orange'
+    end
+  end
+  
+  describe "casted as an attribute, but without a value" do
+    before(:each) do
+      @obj = DummyModel.new
+      @casted_obj = @obj.casted_attribute
+    end
+    it "should be nil" do
+      @casted_obj.should == nil
+    end
   end
   
   describe "casted as attribute" do
     before(:each) do
-      @obj = DummyModel.new(:casted_attribute => {:name => 'whatever'})
+      casted = {:name => 'not whatever'}
+      @obj = DummyModel.new(:casted_attribute => {:name => 'whatever', :casted_attribute => casted})
       @obj.subs.push(WithCastedModelMixin.new())
       @obj.subs << WithCastedModelMixin.new()
       @casted_obj = @obj.casted_attribute
@@ -55,8 +80,8 @@ describe CouchRest::CastedModel do
       @casted_obj.name.should == 'whatever'
     end
     
-    it "should know who casted it" do
-      @casted_obj.casted_by.should == @obj
+    it "should know who is the document" do
+      @casted_obj.document.should == @obj
     end
 
     it "should know as typ of CouchRest::Array" do
@@ -81,6 +106,21 @@ describe CouchRest::CastedModel do
       @obj.subs[1].parent.should be_a_kind_of(CouchRest::Array)
     end
 
+    it "should return nil for the 'no_value' attribute" do
+      @casted_obj.no_value.should be_nil
+    end
+
+    it "should return nil for the unknown attribute" do
+      @casted_obj["unknown"].should be_nil
+    end
+    
+    it "should return {} for the hash attribute" do
+      @casted_obj.details.should == {}
+    end
+    
+    it "should cast its own attributes" do
+      @casted_obj.casted_attribute.should be_instance_of(WithCastedModelMixin)
+    end
   end
   
   describe "casted as an array of a different type" do
@@ -118,6 +158,44 @@ describe CouchRest::CastedModel do
       casted_obj = @obj.casted_attribute
       casted_obj.name = "test"
       casted_obj.name.should == "test"
+    end
+    
+    it "should retain an override of a casted model attribute's default" do
+      casted_obj = @obj.casted_attribute
+      casted_obj.details['color'] = 'orange'
+      @obj.save
+      casted_obj = DummyModel.get(@obj.id).casted_attribute
+      casted_obj.details['color'].should == 'orange'
+    end
+    
+  end
+
+  describe "saving document with array of casted models and validation" do
+    before :each do
+      @cat = Cat.new
+      @cat.save
+    end
+
+    it "should save" do
+      toy = CatToy.new :name => "Mouse"
+      @cat.toys.push(toy)
+      @cat.save.should be_true
+    end
+
+    it "should fail because name is not present" do
+      toy = CatToy.new
+      @cat.toys.push(toy)
+      @cat.should_not be_valid
+      @cat.save.should be_false
+    end
+    
+    it "should not fail if the casted model doesn't have validation" do
+      Cat.property :masters, :cast_as => ['Person'], :default => []
+      Cat.validates_present :name
+      cat = Cat.new(:name => 'kitty')
+      cat.should be_valid
+      cat.masters.push Person.new
+      cat.should be_valid
     end
     
   end
