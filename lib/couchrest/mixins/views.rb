@@ -75,7 +75,7 @@ module CouchRest
         # <tt>spec/core/model_spec.rb</tt>.
 
         def view_by(*keys)
-          opts = keys.pop if keys.last.is_a?(Hash)
+          opts = keys.pop if keys.last.is_a?(::Hash)
           opts ||= {}
           ducktype = opts.delete(:ducktype)
           unless ducktype || opts[:map]

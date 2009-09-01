@@ -434,7 +434,7 @@ module CouchRest
 
             def self.#{symbol}_callback(*filters, &blk)
               type = [:before, :after, :around].include?(filters.first) ? filters.shift : :before
-              options = filters.last.is_a?(Hash) ? filters.pop : {}
+              options = filters.last.is_a?(::Hash) ? filters.pop : {}
               filters.unshift(blk) if block_given?
               
               filters.map! do |filter| 
@@ -450,7 +450,7 @@ module CouchRest
             
             def self.skip_#{symbol}_callback(*filters, &blk)
               type = [:before, :after, :around].include?(filters.first) ? filters.shift : :before
-              options = filters.last.is_a?(Hash) ? filters.pop : {}
+              options = filters.last.is_a?(::Hash) ? filters.pop : {}
               filters.unshift(blk) if block_given?
               filters.each do |filter|
                 self._#{symbol}_callbacks = self._#{symbol}_callbacks.clone(self)

@@ -179,7 +179,7 @@ module CouchRest
       # provided. Also allow :context to be aliased to :on, :when & group
       #
       def opts_from_validator_args(args, defaults = nil)
-        opts = args.last.kind_of?(Hash) ? args.pop : {}
+        opts = args.last.kind_of?(::Hash) ? args.pop : {}
         context = :default
         context = opts[:context] if opts.has_key?(:context)
         context = opts.delete(:on) if opts.has_key?(:on)
