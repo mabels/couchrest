@@ -33,6 +33,7 @@ module CouchRest
   autoload :Server,       'couchrest/core/server'
   autoload :Database,     'couchrest/core/database'
   autoload :Parent,       'couchrest/core/parent'
+  autoload :HashBehavior, 'couchrest/core/hash_behavior'
   autoload :Response,     'couchrest/core/response'
   autoload :Array,        'couchrest/core/array'
   autoload :Document,     'couchrest/core/document'

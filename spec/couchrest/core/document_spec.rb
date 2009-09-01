@@ -207,6 +207,7 @@ describe "dealing with attachments" do
     @attach = "<html><head><title>My Doc</title></head><body><p>Has words.</p></body></html>"
     response = @db.save_doc({'key' => 'value'})
     @doc = @db.get(response['id'])
+puts @doc.inspect
   end
   
   def append_attachment(name='test.html', attach=@attach)
@@ -216,7 +217,7 @@ describe "dealing with attachments" do
       'data' => attach
     }
     @doc.save
-    @rev = @doc['_rev']
+    @rev = @doc.rev
   end
   
   describe "PUTing an attachment directly to the doc" do

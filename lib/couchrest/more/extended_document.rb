@@ -39,6 +39,7 @@ module CouchRest
     define_callbacks :destroy
 
     def initialize(passed_keys={})
+      super
       apply_defaults # defined in CouchRest::Mixins::Properties
       passed_keys.each do |k,v|
           if self.respond_to?("#{k}=")
@@ -47,9 +48,8 @@ module CouchRest
             val.parent = self if val.respond_to?('parent=')
           end
       end if passed_keys
-      super
       cast_keys      # defined in CouchRest::Mixins::Properties
-      unless self['_id'] && self['_rev']
+      unless self.id && self.rev
         self['couchrest-type'] = self.class.to_s
       end
     end
@@ -99,13 +99,13 @@ module CouchRest
     def self.unique_id method = nil, &block
       if method
         define_method :set_unique_id do
-          self['_id'] ||= self.send(method)
+          self.id ||= self.send(method)
         end
       elsif block
         define_method :set_unique_id do
           uniqid = block.call(self)
           raise ArgumentError, "unique_id block must not return nil" if uniqid.nil?
-          self['_id'] ||= uniqid
+          self.id ||= uniqid
         end
       end
     end
@@ -236,8 +236,7 @@ module CouchRest
         _run_destroy_callbacks do
           result = database.delete_doc(self, bulk)
           if result['ok']
-            self.delete('_rev')
-            self.delete('_id')
+            self.id = self.rev = nil
           end
           result['ok']
         end

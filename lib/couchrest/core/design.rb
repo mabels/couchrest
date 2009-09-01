@@ -1,7 +1,7 @@
 module CouchRest  
   class Design < Document
     def view_by *keys
-      opts = keys.pop if keys.last.is_a?(Hash)
+      opts = keys.pop if keys.last.kind_of?(Hash)
       opts ||= {}
       self['views'] ||= {}
       method_name = "by_#{keys.join('_and_')}"
@@ -53,10 +53,11 @@ JAVASCRIPT
     end
 
     def name= newname
-      self['_id'] = "_design/#{newname}"
+      self.id = "_design/#{newname}"
     end
 
     def save
+#puts self.to_json
       raise ArgumentError, "_design docs require a name" unless name && name.length > 0
       super
     end

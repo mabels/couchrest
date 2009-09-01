@@ -35,7 +35,7 @@ module CouchRest
               'all' => {
                 'map' => "function(doc) {
                   if (doc['couchrest-type'] == '#{self.to_s}') {
-                    emit(doc['_id'],1);
+                    emit(doc.id,1);
                   }
                 }"
               }
@@ -70,11 +70,11 @@ module CouchRest
         
         def reset_design_doc
           current = self.database.get(design_doc_id) rescue nil
-          design_doc['_id']  = design_doc_id
+          design_doc.id  = design_doc_id
           if current.nil?
-            design_doc.delete('_rev')
+            design_doc.rev = nil
           else
-            design_doc['_rev'] = current['_rev']
+            design_doc.rev = current.rev
           end
           self.design_doc_fresh = true
         end
@@ -82,7 +82,7 @@ module CouchRest
         # Writes out a design_doc to a given database, returning the
         # updated design doc
         def update_design_doc(design_doc, db = database)
-          saved = db.get(design_doc['_id']) rescue nil
+          saved = db.get(design_doc.id) rescue nil
           if saved
             design_doc['views'].each do |name, view|
               saved['views'][name] = view

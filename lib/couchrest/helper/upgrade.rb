@@ -39,11 +39,11 @@ module CouchRest
       results = @olddb.get(row["id"], {:open_revs => "all", :attachments => true})
       results.select{|r|r["ok"]}.each do |r|
         doc = r["ok"]
-        if /^_/.match(doc["_id"]) && !/^_design/.match(doc["_id"])
-          puts "invalid docid #{doc["_id"]} -- trimming"
-          doc["_id"] = doc["_id"].sub('_','')
+        if /^_/.match(doc.id) && !/^_design/.match(doc.id)
+          puts "invalid docid #{doc.id} -- trimming"
+          doc.id = doc.id.sub('_','')
         end
-        doc.delete('_rev')
+        doc.rev = nil
         @bulk_docs << doc
       end
     end

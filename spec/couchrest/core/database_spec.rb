@@ -143,7 +143,7 @@ describe CouchRest::Database do
       @db.save_doc({'_id' => @docid, 'will-exist' => 'here'})
     end
     it "should get the document" do
-      doc = @db.get(@r['id'])
+      doc = @db.get(@r.id)
       doc['lemons'].should == 'from texas'
     end
     it "should work with a funky id" do
@@ -159,7 +159,7 @@ describe CouchRest::Database do
           {"another" => ["set","of","keys"]}
         ])
       rs.each do |r|
-        @db.get(r['id']).rev.should == r["rev"]
+        @db.get(r.id).rev.should == r.rev
       end
     end
     
@@ -180,7 +180,7 @@ describe CouchRest::Database do
           {"another" => ["set","of","keys"]}
         ])
       rs.each do |r|
-        @db.get(r['id']).rev.should == r["rev"]
+        @db.get(r.id).rev.should == r.rev
       end
     end
 
@@ -214,7 +214,7 @@ describe CouchRest::Database do
     end
     it "should create the document and return the id" do
       r = @db.save_doc({'lemons' => 'from texas', 'and' => 'spain'})
-      r2 = @db.get(r['id'])
+      r2 = @db.get(r.id)
       r2["lemons"].should == "from texas"
     end
     it "should use PUT with UUIDs" do
@@ -395,7 +395,7 @@ describe CouchRest::Database do
           }
         }
       }
-      @docid = @db.save_doc(@doc)['id']
+      @docid = @db.save_doc(@doc).id
     end
     it "should save and be indicated" do
       doc = @db.get(@docid)
@@ -421,7 +421,7 @@ describe CouchRest::Database do
     it "should start without the document" do
       # r = @db.save_doc({'lemons' => 'from texas', 'and' => 'spain'})
       @db.documents['rows'].each do |doc|
-        doc['id'].should_not == 'my-doc'
+        doc.id.should_not == 'my-doc'
       end
       # should_not include({'_id' => 'my-doc'})
       # this needs to be a loop over docs on content with the post
@@ -512,10 +512,10 @@ describe CouchRest::Database do
       @db.save_doc({'_id' => @docid, 'will-exist' => 'here'})
     end
     it "should work" do
-      doc = @db.get(@r['id'])
+      doc = @db.get(@r.id)
       doc['and'].should == 'spain'
       @db.delete_doc doc
-      lambda{@db.get @r['id']}.should raise_error
+      lambda{@db.get @r.id}.should raise_error
     end
     it "should work with uri id" do
       doc = @db.get(@docid)
@@ -539,7 +539,7 @@ describe CouchRest::Database do
     before :each do
       @r = @db.save_doc({'artist' => 'Zappa', 'title' => 'Muffin Man'})
       @docid = 'tracks/zappa/muffin-man'
-      @doc = @db.get(@r['id'])
+      @doc = @db.get(@r.id)
     end
     describe "to a new location" do
       it "should work" do
@@ -580,7 +580,7 @@ describe CouchRest::Database do
     end
     ds = @db.documents
     ds['rows'].should be_an_instance_of(Array)
-    ds['rows'][0]['id'].should_not be_nil
+    ds['rows'][0].id.should_not be_nil
     ds['total_rows'].should == 5
   end
   
@@ -593,7 +593,7 @@ describe CouchRest::Database do
     it "should list documents with keys and such" do
       ds = @db.documents
       ds['rows'].should be_an_instance_of(Array)
-      ds['rows'][0]['id'].should == "doc0"
+      ds['rows'][0].id.should == "doc0"
       ds['total_rows'].should == 9      
     end
     it "should take query params" do

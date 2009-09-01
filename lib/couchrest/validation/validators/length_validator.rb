@@ -125,7 +125,9 @@ module CouchRest
       #     # just_right is between 1 and 10 (inclusive of both 1 and 10)
       #
       def validates_length(*fields)
+#puts "A=#{fields.inspect}"
         opts = opts_from_validator_args(fields)
+#puts "B=#{fields.inspect}"
         add_validator_to_context(opts, fields, CouchRest::Validation::LengthValidator)
       end
 

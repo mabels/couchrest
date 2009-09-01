@@ -26,13 +26,6 @@ module CouchRest
       self.database = db
     end
     
-    def id
-      self['_id']
-    end
-    
-    def rev
-      self['_rev']
-    end
     
     # returns true if the document has never been saved
     def new_document?
@@ -45,7 +38,8 @@ module CouchRest
     # If <tt>bulk</tt> is <tt>true</tt> (defaults to false) the document is cached for bulk save.
     def save(bulk = false)
       raise ArgumentError, "doc.database required for saving" unless database
-      result = database.save_doc self, bulk
+#puts self.to_hash.inspect
+      result = database.save_doc self.to_hash, bulk
       result['ok']
     end
 
@@ -58,8 +52,8 @@ module CouchRest
       raise ArgumentError, "doc.database required to destroy" unless database
       result = database.delete_doc(self, bulk)
       if result['ok']
-        self['_rev'] = nil
-        self['_id'] = nil
+        self.rev = nil
+        self.id = nil
       end
       result['ok']
     end
