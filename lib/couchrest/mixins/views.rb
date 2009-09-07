@@ -134,12 +134,12 @@ module CouchRest
           else
             begin
               view = fetch_view db, name, opts.merge({:include_docs => true}), &block
-              view['rows'].collect{|r|new(r['doc'])} if view['rows']
+              view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
             rescue
               # fallback for old versions of couchdb that don't 
               # have include_docs support
               view = fetch_view(db, name, opts, &block)
-              view['rows'].collect{|r|new(db.get(r['id']))} if view['rows']
+              view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
             end
           end
         end
