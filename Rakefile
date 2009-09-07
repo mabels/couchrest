@@ -17,13 +17,13 @@ end
 spec = Gem::Specification.new do |s|
   s.name = "couchrest"
   s.version = CouchRest::VERSION
-  s.date = "2008-11-22"
+  s.date = "2009-08-29"
   s.summary = "Lean and RESTful interface to CouchDB."
-  s.email = "jchris@apache.org"
-  s.homepage = "http://github.com/jchris/couchrest"
+  s.email = "meno@abels.name"
+  s.homepage = "http://github.com/mabels/couchrest"
   s.description = "CouchRest provides a simple interface on top of CouchDB's RESTful HTTP API, as well as including some utility scripts for managing views and attachments."
   s.has_rdoc = true
-  s.authors = ["J. Chris Anderson", "Matt Aimonetti"]
+  s.authors = ["J. Chris Anderson", "Matt Aimonetti", "Meno Abels"]
   s.files = %w( LICENSE README.md Rakefile THANKS.md ) + 
     Dir["{examples,lib,spec,utils}/**/*"] - 
     Dir["spec/tmp"]

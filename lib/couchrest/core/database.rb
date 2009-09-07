@@ -87,7 +87,7 @@ module CouchRest
       slug = escape_docid(id)
       url = CouchRest.paramify_url("#{@uri}/#{slug}", params)
       result = CouchRest.get(url)
-      return result unless result.is_a?(Hash)
+      return result unless result.is_a?(::Hash)
       doc = if /^_design/ =~ result["_id"]
         Design.new(result)
       else

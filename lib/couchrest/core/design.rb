@@ -1,7 +1,7 @@
 module CouchRest  
   class Design < Document
     def view_by *keys
-      opts = keys.pop if keys.last.is_a?(Hash)
+      opts = keys.pop if keys.last.is_a?(::Hash)
       opts ||= {}
       self['views'] ||= {}
       method_name = "by_#{keys.join('_and_')}"

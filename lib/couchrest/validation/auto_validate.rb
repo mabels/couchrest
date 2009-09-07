@@ -26,7 +26,7 @@ module CouchRest
         options = base_options.clone
         opts = property.options
         options[:message] = if opts[:messages]
-          if opts[:messages].is_a?(Hash) and msg = opts[:messages][validator_name]
+          if opts[:messages].is_a?(::Hash) and msg = opts[:messages][validator_name]
             msg
           else
             nil
