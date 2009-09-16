@@ -2,34 +2,55 @@ module CouchRest
 
   # Basic attribute support for adding getter/setter + validation
   class Property
-    attr_reader :name, :type, :read_only, :alias, :default, :casted, :init_method, :options
+    attr_reader :name, :read_only, :alias, :default, :casted, :init_method, :options, :type
     
     # attribute to define
-    def initialize(name, type = nil, options = {})
+    def initialize(name, options)
       @name = name.to_s
-      parse_type(type)
+      @type = self.class.parse_type(options)
       parse_options(options)
       self
     end
     
     
     private
+
+      class Type
+         attr_writer :item, :container
+         def item
+            @item = ::CouchRest.constantize(@item) if @item.kind_of?(::String) && @item.class != Class
+            @item
+         end
+         def container
+            @container = ::CouchRest.constantize(@container) if @container.kind_of?(::String) && @container.class != Class
+            @container
+         end
+         def to_s
+            "<Property::Type(#{self.object_id}):item=>#{item.inspect},container=>#{container.inspect}>"
+         end
+      end
     
-      def parse_type(type)
-        if type.nil?
-          @type = 'String'
-        elsif type.kind_of?(::Array) 
+      #(options.delete(:cast_as) || options.delete(:type)
+      def self.parse_type(options)
+        type = options.delete(:cast_as) || options.delete(:type) 
+        ret = Type.new
+        ret.item = String
+        ret.container = nil
+        if type.kind_of?(::Array) 
           if type.empty? 
-            @type = type.class.name
+            ret.container = type
           else
-            @type = ::CouchRest::Array.new([type.first.to_s])
+            ret.container = ::CouchRest::Array
+            ret.item = type.first
           end
         elsif type.kind_of?(::Hash)
-          @type = Kernel.const_get(type.keys.first).new()
-          @type.push(type.values.first)
-        else
-          @type = type.to_s
+          ret.container = type.keys.first
+          ret.item = type.values.first
+        elsif !type.nil?
+          ret.item = type
         end
+#puts "TYPE:#{ret.inspect}"
+        return ret
       end
       
       def parse_options(options)

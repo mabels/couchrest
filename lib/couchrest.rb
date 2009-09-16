@@ -28,7 +28,7 @@ require 'couchrest/monkeypatches'
 
 # = CouchDB, close to the metal
 module CouchRest
-  VERSION    = '1.00' unless self.const_defined?("VERSION")
+  VERSION    = '1.01' unless self.const_defined?("VERSION")
   
   autoload :Server,       'couchrest/core/server'
   autoload :Database,     'couchrest/core/database'
@@ -68,7 +68,6 @@ module CouchRest
       unless /\A(?:::)?([A-Z]\w*(?:::[A-Z]\w*)*)\z/ =~ camel_cased_word
         raise NameError, "#{camel_cased_word.inspect} is not a valid constant name!"
       end
-
       Object.module_eval("::#{$1}", __FILE__, __LINE__)
     end
     

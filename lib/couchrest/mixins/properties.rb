@@ -60,29 +60,39 @@ module CouchRest
             return input_value unless property
             return input_value unless property.casted
             target = property.type
-            if target.respond_to?(:push)
-              klass = ::CouchRest.constantize(target[0])
+            if target.container
               input_value ||= []
-              ret = target.class.new
-              input_value.each do |value|
-                # Auto parse Time objects
-                obj = ( (property.init_method == 'new') && klass == Time) ? Time.parse(value) : klass.send(property.init_method, value)
-                obj.casted_by = self if obj.respond_to?('casted_by=')
-                obj.parent = ret if obj.respond_to?('parent=')
-                ret.push(obj)
-              end
+              ret = target.container.new
+              if input_value.kind_of?(::Array) 
+                 input_value.each do |value|
+                   # Auto parse Time objects
+                   obj = ( (property.init_method == 'new') && target.item == Time) ? Time.parse(value) : target.item.send(property.init_method, value)
+                   obj.casted_by = self if obj.respond_to?('casted_by=')
+                   obj.parent = ret if obj.respond_to?('parent=')
+                   ret.push(obj)
+                 end
+               elsif input_value.kind_of?(::Hash) 
+                 input_value.each do |key,value|
+                   obj = ( (property.init_method == 'new') && target.item == Time) ? Time.parse(value) : target.item.send(property.init_method, value)
+                   obj.casted_by = self if obj.respond_to?('casted_by=')
+                   obj.parent = ret if obj.respond_to?('parent=')
+                   ret[key] = obj
+                 end
+               else
+                  puts "ILLEGAL Type:#{input_value.class.name}"
+               end
             else
               # Auto parse Time objects
-              ret = if ((property.init_method == 'new') && target == 'Time') 
+              ret = if ((property.init_method == 'new') && target.item == Time) 
                 input_value.is_a?(String) ? Time.parse(input_value.dup) : input_value
               else
                 # Let people use :send as a Time parse arg
-                klass = ::CouchRest.constantize(target)
+                #klass = ::CouchRest.constantize(target.type)
                 # I'm not convince we should or should not create a new instance if we are casting a doc/extended doc without default value and nothing was passed
                 # unless (property.casted && 
                 #   (klass.superclass == CouchRest::ExtendedDocument || klass.superclass == CouchRest::Document) && 
                 #     (self[key].nil? || property.default.nil?))
-                klass.send(property.init_method, input_value)
+                target.item.send(property.init_method, input_value)
                 #end
               end
               ret.casted_by = requesting_casting_type if ret.respond_to?('casted_by=')
@@ -98,7 +108,7 @@ module CouchRest
           def define_property(name, options={})
             # check if this property is going to casted
             options[:casted] = options[:cast_as] ? options[:cast_as] : false
-            property = CouchRest::Property.new(name, (options.delete(:cast_as) || options.delete(:type)), options)
+            property = CouchRest::Property.new(name, options)
             create_property_getter(property) 
             create_property_setter(property) unless property.read_only == true
             properties << property
