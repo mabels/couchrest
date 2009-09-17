@@ -6,7 +6,7 @@ module CouchRest
 
     def self.build(doc, model_typ = nil, level = 'root') 
       if doc['couchrest-type'] != nil || (model_typ && !model_typ.empty?)
-        my = Kernel.const_get(doc['couchrest-type'] || model_typ).new()
+        my = ::CouchRest.constantize(doc['couchrest-type'] || model_typ).new()
       else
         my = Document.new()
       end

@@ -66,14 +66,14 @@ module CouchRest
               if input_value.kind_of?(::Array) 
                  input_value.each do |value|
                    # Auto parse Time objects
-                   obj = ( (property.init_method == 'new') && target.item == Time) ? Time.parse(value) : target.item.send(property.init_method, value)
+                   obj = ( (property.init_method == 'new') && [Date,Time].include?(target.item)) ? target.item.parse(value) : target.item.send(property.init_method, value)
                    obj.casted_by = self if obj.respond_to?('casted_by=')
                    obj.parent = ret if obj.respond_to?('parent=')
                    ret.push(obj)
                  end
                elsif input_value.kind_of?(::Hash) 
                  input_value.each do |key,value|
-                   obj = ( (property.init_method == 'new') && target.item == Time) ? Time.parse(value) : target.item.send(property.init_method, value)
+                   obj = ( (property.init_method == 'new') &&  [Date,Time].include?(target.item)) ? target.item.parse(value) : target.item.send(property.init_method, value)
                    obj.casted_by = self if obj.respond_to?('casted_by=')
                    obj.parent = ret if obj.respond_to?('parent=')
                    ret[key] = obj
@@ -83,8 +83,8 @@ module CouchRest
                end
             else
               # Auto parse Time objects
-              ret = if ((property.init_method == 'new') && target.item == Time) 
-                input_value.is_a?(String) ? Time.parse(input_value.dup) : input_value
+              ret = if ((property.init_method == 'new') &&  [Date,Time].include?(target.item))
+                input_value.is_a?(String) ? target.item.parse(input_value.dup) : input_value
               else
                 # Let people use :send as a Time parse arg
                 #klass = ::CouchRest.constantize(target.type)
