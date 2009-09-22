@@ -37,10 +37,11 @@ module CouchRest
       cast_keys      # defined in CouchRest::Mixins::Properties
       unless self['_id'] && self['_rev']
         self['couchrest-type'] = self.class.to_s
-        def self.id
-           @inner_id ||= self.get_unique_id
+        if self.respond_to? :get_unique_id
+           def self.id
+              @inner_id ||= self.get_unique_id
+           end
         end
-
       end
     end
     
