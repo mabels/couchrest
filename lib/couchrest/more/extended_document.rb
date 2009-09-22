@@ -37,6 +37,10 @@ module CouchRest
       cast_keys      # defined in CouchRest::Mixins::Properties
       unless self['_id'] && self['_rev']
         self['couchrest-type'] = self.class.to_s
+        def self.id
+           @inner_id ||= self.get_unique_id
+        end
+
       end
     end
     
@@ -65,15 +69,18 @@ module CouchRest
     # should use the class name as part of the unique id.
     def self.unique_id method = nil, &block
       if method
-        define_method :set_unique_id do
-          self['_id'] ||= self.send(method)
+        define_method :get_unique_id do
+          self.send(method)
         end
       elsif block
-        define_method :set_unique_id do
+        define_method :get_unique_id do
           uniqid = block.call(self)
           raise ArgumentError, "unique_id block must not return nil" if uniqid.nil?
-          self['_id'] ||= uniqid
+          uniqid
         end
+      end
+      define_method :set_unique_id do
+         self['_id'] ||= self.get_unique_id
       end
     end
     
