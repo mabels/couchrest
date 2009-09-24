@@ -67,15 +67,20 @@ module CouchRest
     # paramaters as described in http://wiki.apache.org/couchdb/HttpViewApi
     def view(name, params = {}, &block)
       keys = params.delete(:keys)
-      name = name.split('/') # I think this will always be length == 2, but maybe not...
-      dname = name.shift
-      vname = name.join('/')
-      url = CouchRest.paramify_url "#{@uri}/_design/#{dname}/_view/#{vname}", params
+      if name != :all
+         name = name.split('/') # I think this will always be length == 2, but maybe not...
+         dname = name.shift
+         vname = name.join('/')
+         uri = "_design/#{dname}/_view/#{vname}"
+      else
+         uri = '_all_docs'
+      end
+      url = CouchRest.paramify_url "#{@uri}/#{uri}", params
       if keys
         CouchRest.post(url, {:keys => keys})
       else
         if block_given?
-          @streamer.view("_design/#{dname}/_view/#{vname}", params, &block)
+          @streamer.view(uri, params, &block)
         else
           CouchRest.get url
         end
