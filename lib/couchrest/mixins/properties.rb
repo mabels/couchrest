@@ -133,9 +133,14 @@ module CouchRest
           # defines the setter for the property (and optional aliases)
           def create_property_setter(property)
             meth = property.name
+            if property.coerce
+               value = "value.#{property.coerce}" 
+            else
+               value = "value"
+            end
             class_eval <<-EOS
               def #{meth}=(value)
-                self['#{meth}'] = value
+                self['#{meth}'] = #{value}
               end
             EOS
 

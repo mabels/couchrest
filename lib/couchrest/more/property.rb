@@ -2,7 +2,7 @@ module CouchRest
 
   # Basic attribute support for adding getter/setter + validation
   class Property
-    attr_reader :name, :read_only, :alias, :default, :casted, :init_method, :options, :type
+    attr_reader :name, :read_only, :alias, :default, :casted, :init_method, :options, :type, :coerce
     
     # attribute to define
     def initialize(name, options)
@@ -59,6 +59,7 @@ module CouchRest
         @read_only          = options.delete(:read_only)  if options[:read_only]
         @alias              = options.delete(:alias)      if options[:alias]
         @default            = options.delete(:default)    if options[:default]
+        @coerce             = options.delete(:coerce)     if options[:coerce]
         @casted             = options[:casted] ? true : false
         @init_method        = options[:send] ? options.delete(:send) : 'new'
         @options            = options

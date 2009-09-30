@@ -42,14 +42,14 @@ JAVASCRIPT
 
     # Dispatches to any named view in a specific database
     def view_on db, view_name, query={}, &block
-      if view_name == :all
-         view_slug = :all
-         defaults = {}
-      else
+      #if view_name == :all
+      #   view_slug = :all
+      #   defaults = {}
+      #else
          view_name = view_name.to_s
          view_slug = "#{name}/#{view_name}"
          defaults = (self['views'][view_name] && self['views'][view_name]["couchrest-defaults"]) || {}
-      end
+      #end
       db.view(view_slug, defaults.merge(query), &block)
     end
 
