@@ -135,7 +135,7 @@ module CouchRest
             begin
               view = fetch_view db, name, opts.merge({:include_docs => true}), &block
               view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
-            rescue
+            rescue Exception => e
               # fallback for old versions of couchdb that don't 
               # have include_docs support
               view = fetch_view(db, name, opts, &block)
