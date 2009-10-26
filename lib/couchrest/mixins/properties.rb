@@ -124,9 +124,12 @@ module CouchRest
             EOS
 
             if property.alias
-              class_eval <<-EOS, __FILE__, __LINE__
-                alias #{property.alias.to_sym} #{property.name.to_sym}
-              EOS
+               if property.alias.respond_to?(:each)
+                  __alias = property.alias
+               else
+                  __alias = [property.alias]
+               end
+               class_eval __alias.map { |_alias| "alias #{_alias.to_sym} #{property.name.to_sym};" }.join('')
             end
           end
 
