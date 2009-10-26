@@ -122,15 +122,8 @@ module CouchRest
                 self['#{property.name}']
               end
             EOS
-
-            if property.alias
-               if property.alias.respond_to?(:each)
-                  __alias = property.alias
-               else
-                  __alias = [property.alias]
-               end
-               class_eval __alias.map { |_alias| "alias #{_alias.to_sym} #{property.name.to_sym};" }.join('')
-            end
+#puts "XXXXX:#{property.alias.inspect}"
+            class_eval property.alias.map { |_alias| "alias #{_alias.to_sym} #{property.name.to_sym};" }.join('')
           end
 
           # defines the setter for the property (and optional aliases)
@@ -146,12 +139,8 @@ module CouchRest
                 self['#{meth}'] = #{value}
               end
             EOS
-
-            if property.alias
-              class_eval <<-EOS
-                alias #{property.alias.to_sym}= #{meth.to_sym}=
-              EOS
-            end
+#puts "YYYYY:#{property.alias.inspect}"
+            class_eval property.alias.map { |_alias| "alias #{_alias.to_sym}= #{property.name.to_sym}=;" }.join('')
           end
           
       end # module ClassMethods

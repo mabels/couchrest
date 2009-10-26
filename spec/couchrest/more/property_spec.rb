@@ -35,6 +35,14 @@ describe "ExtendedDocument properties" do
     @card.family_name.should == "Aimonetti"
     @card.family_name.should == @card.last_name
   end
+
+  it "should let you use an alias[] for an attribute" do
+    @card.first_name = "Aimonetti"
+    @card.f_name.should == "Aimonetti"
+    @card.f_name.should == @card.first_name
+    @card.g_name.should == "Aimonetti"
+    @card.g_name.should == @card.first_name
+  end
   
   it "should be auto timestamped" do
     @card.created_at.should be_nil

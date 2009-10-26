@@ -8,7 +8,7 @@ class Card < CouchRest::ExtendedDocument
   use_database TEST_SERVER.default_database
   
   # Official Schema
-  property :first_name
+  property :first_name,       :alias     => [:f_name,:g_name]
   property :last_name,        :alias     => :family_name
   property :read_only_value,  :read_only => true
   
