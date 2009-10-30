@@ -132,15 +132,8 @@ module CouchRest
           if raw || (opts.has_key?(:include_docs) && opts[:include_docs] == false)
             fetch_view(db, name, opts, &block)
           else
-            begin
-              view = fetch_view db, name, opts.merge({:include_docs => true}), &block
-              view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
-            rescue Exception => e
-              # fallback for old versions of couchdb that don't 
-              # have include_docs support
-              view = fetch_view(db, name, opts, &block)
-              view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
-            end
+            view = fetch_view db, name, opts.merge({:include_docs => true}), &block
+            view['rows'].collect{|r| n = new(r['doc']); n.database = db; n } if view['rows']
           end
         end
 
