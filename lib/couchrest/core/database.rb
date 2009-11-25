@@ -49,7 +49,7 @@ module CouchRest
       documents(:keys => ids, :include_docs => true)
     end
     alias :bulk_load :get_bulk
-  
+
     # POST a temporary view function to CouchDB for querying. This is not
     # recommended, as you don't get any performance benefit from CouchDB's
     # materialized views. Can be quite slow on large databases.
@@ -57,7 +57,7 @@ module CouchRest
       keys = params.delete(:keys)
       funcs = funcs.merge({:keys => keys}) if keys
       url = CouchRest.paramify_url "#{@uri}/_temp_view", params
-      JSON.parse(RestClient.post(url, funcs.to_json, {"Content-Type" => 'application/json'}))
+      JSON.parse(RestClient.post(url, funcs.to_json, CouchRest.http_headers))
     end
     
     # backwards compatibility is a plus

@@ -28,7 +28,7 @@ require 'couchrest/monkeypatches'
 
 # = CouchDB, close to the metal
 module CouchRest
-  VERSION    = '1.06' unless self.const_defined?("VERSION")
+  VERSION    = '1.07' unless self.const_defined?("VERSION")
   
   autoload :Server,       'couchrest/core/server'
   autoload :Database,     'couchrest/core/database'
@@ -139,11 +139,15 @@ module CouchRest
       cr = CouchRest.new(parsed[:host])
       cr.database(parsed[:database])
     end
+
+    def http_headers
+      {"Content-Type" => 'application/json; charset=UTF-8'}
+    end
     
     def put(uri, doc = nil)
       payload = doc.to_json if doc
       begin
-        JSON.parse(RestClient.put(uri, payload))
+        JSON.parse(RestClient.put(uri, payload,  CouchRest.http_headers))
       rescue Exception => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a PUT request #{uri}\npayload: #{payload.inspect}\n#{e}"
@@ -168,7 +172,7 @@ module CouchRest
     def post uri, doc = nil
       payload = doc.to_json if doc
       begin
-        JSON.parse(RestClient.post(uri, payload, {"Content-Type" => 'application/json'}))
+        JSON.parse(RestClient.post(uri, payload, CouchRest.http_headers))
       rescue Exception => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a POST request #{uri}\npayload: #{payload.inspect}\n#{e}"

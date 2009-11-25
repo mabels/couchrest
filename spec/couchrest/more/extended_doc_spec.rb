@@ -446,7 +446,7 @@ describe "ExtendedDocument" do
     end
     it "should make it go away" do
       @dobj.destroy
-      lambda{Basic.get(@dobj.id)}.should raise_error
+      Basic.get(@dobj.id).should be_nil
     end
   end
   
