@@ -168,7 +168,7 @@ module CouchRest
     def post uri, doc = nil
       payload = doc.to_json if doc
       begin
-        JSON.parse(RestClient.post(uri, payload))
+        JSON.parse(RestClient.post(uri, payload, {"Content-Type" => 'application/json'}))
       rescue Exception => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a POST request #{uri}\npayload: #{payload.inspect}\n#{e}"
