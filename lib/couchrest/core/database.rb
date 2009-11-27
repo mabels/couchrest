@@ -291,6 +291,7 @@ module CouchRest
     end
     
     def escape_docid id      
+      id = id.to_s
       /^_design\/(.*)/ =~ id ? "_design/#{CGI.escape($1)}" : CGI.escape(id) 
     end
 
