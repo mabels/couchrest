@@ -66,7 +66,11 @@ module CouchRest
               if input_value.kind_of?(::Array) 
                  input_value.each do |value|
                    # Auto parse Time objects
-                   obj = ( (property.init_method == 'new') && [Date,Time].include?(target.item)) ? target.item.parse(value) : target.item.send(property.init_method, value)
+                   klazz = target.item
+                   unless target.item
+                     klazz = CouchRest.constantize(value['couchrest-type'])
+                   end
+                   obj = ( (property.init_method == 'new') && [Date,Time].include?(target.item)) ? klazz.parse(value) : klazz.send(property.init_method, value)
                    obj.casted_by = self if obj.respond_to?('casted_by=')
                    obj.parent = ret if obj.respond_to?('parent=')
                    ret.push(obj)
