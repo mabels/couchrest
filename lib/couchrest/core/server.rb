@@ -1,9 +1,21 @@
 module CouchRest
   class Server
-    attr_accessor :uri, :uuid_batch_count, :available_databases
-    def initialize(server = 'http://127.0.0.1:5984', uuid_batch_count = 1000)
-      @uri = server
+    attr_accessor :url, :uuid_batch_count, :available_databases
+    def initialize(uri = 'http://127.0.0.1:5984', uuid_batch_count = 1000)
+      @url = CouchRest.url(uri)
       @uuid_batch_count = uuid_batch_count
+    end
+
+    def to_s
+      uri
+    end
+
+    def uri
+      @url.class.build({:scheme=>@url.scheme,
+                        :userinfo=>@url.userinfo, 
+                        :host=>@url.host, 
+                        :port=>@url.port, 
+                        :registry=>@url.registry}).to_s
     end
   
     # Lists all "available" databases.
@@ -45,7 +57,7 @@ module CouchRest
   
     # Lists all databases on the server
     def databases
-      CouchRest.get "#{@uri}/_all_dbs"
+      CouchRest.get "#{uri}/_all_dbs"
     end
   
     # Returns a CouchRest::Database for the given name
@@ -61,25 +73,25 @@ module CouchRest
   
     # GET the welcome message
     def info
-      CouchRest.get "#{@uri}/"
+      CouchRest.get "#{uri}/"
     end
 
     # Create a database
     def create_db(name)
-      CouchRest.put "#{@uri}/#{name}"
+      CouchRest.put "#{uri}/#{name}"
       database(name)
     end
 
     # Restart the CouchDB instance
     def restart!
-      CouchRest.post "#{@uri}/_restart"
+      CouchRest.post "#{uri}/_restart"
     end
 
     # Retrive an unused UUID from CouchDB. Server instances manage caching a list of unused UUIDs.
     def next_uuid(count = @uuid_batch_count)
       @uuids ||= []
       if @uuids.empty?
-        @uuids = CouchRest.get("#{@uri}/_uuids?count=#{count}")["uuids"]
+        @uuids = CouchRest.get("#{uri}/_uuids?count=#{count}")["uuids"]
       end
       @uuids.pop
     end

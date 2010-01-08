@@ -12,7 +12,7 @@ describe CouchRest::Database do
     it "should escape the name in the URI" do
       db = @cr.database("foo/bar")
       db.name.should == "foo/bar"
-      db.uri.should == "#{COUCHHOST}/foo%2Fbar"
+      db.to_s.should == "#{COUCHHOST}/#{CGI.escape('foo/bar')}"
     end
   end
 
@@ -65,7 +65,7 @@ describe CouchRest::Database do
   describe "saving a view" do
     before(:each) do
       @view = {'test' => {'map' => 'function(doc) {
-        if (doc.word && !/\W/.test(doc.word)) {
+        if (doc.word && doc.word.split(" ").length > 1) {
           emit(doc.word,null);
         }
       }'}}

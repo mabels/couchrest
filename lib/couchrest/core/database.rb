@@ -3,7 +3,7 @@ require "base64"
 
 module CouchRest
   class Database
-    attr_reader :server, :host, :name, :root, :uri
+    attr_reader :server, :name
     attr_accessor :bulk_save_cache_limit
      
     # Create a CouchRest::Database adapter for the supplied CouchRest::Server
@@ -16,27 +16,34 @@ module CouchRest
     def initialize(server, name)
       @name = name
       @server = server
-      @host = server.uri
-      @uri = @root = "#{host}/#{name.gsub('/','%2F')}"
+
+      @url = server.url.dup
+      @url.path = "/#{CGI.escape(name)}"
+
       @streamer = Streamer.new(self)
       @bulk_save_cache = []
       @bulk_save_cache_limit = 500  # must be smaller than the uuid count
     end
+
+    #, :root, :uri
+    #def host
+    #  @server.uri
+    #end
     
     # returns the database's uri
     def to_s
-      @uri
+      @url.to_s
     end
     
     # GET the database info from CouchDB
     def info
-      CouchRest.get @uri
+      CouchRest.get self.to_s
     end
     
     # Query the <tt>_all_docs</tt> view. Accepts all the same arguments as view.
     def documents(params = {})
       keys = params.delete(:keys)
-      url = CouchRest.paramify_url "#{@uri}/_all_docs", params
+      url = CouchRest.paramify_url "#{self}/_all_docs", params
       if keys
         CouchRest.post(url, {:keys => keys})
       else
@@ -56,7 +63,7 @@ module CouchRest
     def slow_view(funcs, params = {})
       keys = params.delete(:keys)
       funcs = funcs.merge({:keys => keys}) if keys
-      url = CouchRest.paramify_url "#{@uri}/_temp_view", params
+      url = CouchRest.paramify_url "#{self}/_temp_view", params
       JSON.parse(RestClient.post(url, funcs.to_json, CouchRest.http_headers))
     end
     
@@ -75,7 +82,7 @@ module CouchRest
       #else
       #   uri = '_all_docs'
       #end
-      url = CouchRest.paramify_url "#{@uri}/#{uri}", params
+      url = CouchRest.paramify_url "#{self}/#{uri}", params
       if keys
         CouchRest.post(url, {:keys => keys})
       else
@@ -90,7 +97,7 @@ module CouchRest
     # GET a document from CouchDB, by id. Returns a Ruby Hash.
     def get(id, params = {}, model_typ = '')
       slug = escape_docid(id)
-      url = CouchRest.paramify_url("#{@uri}/#{slug}", params)
+      url = CouchRest.paramify_url("#{self}/#{slug}", params)
       result = CouchRest.get(url)
       return result unless result.is_a?(::Hash)
       doc = if /^_design/ =~ result["_id"]
@@ -108,7 +115,7 @@ module CouchRest
       # name = CGI.escape(name)
       uri = uri_for_attachment(doc, name)
       RestClient.get uri
-      # "#{@uri}/#{slug}/#{name}"
+      # "#{self}/#{slug}/#{name}"
     end
     
     # PUT an attachment directly to CouchDB
@@ -148,13 +155,13 @@ module CouchRest
       end
       result = if doc['_id']
         slug = escape_docid(doc['_id'])        
-        CouchRest.put "#{@uri}/#{slug}", doc
+        CouchRest.put "#{self}/#{slug}", doc
       else
         begin
           slug = doc['_id'] = @server.next_uuid
-          CouchRest.put "#{@uri}/#{slug}", doc
+          CouchRest.put "#{self}/#{slug}", doc
         rescue #old version of couchdb
-          CouchRest.post @uri, doc
+          CouchRest.post self.to_s, doc
         end
       end
       if result['ok']
@@ -189,7 +196,7 @@ module CouchRest
           doc['_id'] = nextid if nextid
         end
       end
-      CouchRest.post "#{@uri}/_bulk_docs", {:docs => docs}
+      CouchRest.post "#{self}/_bulk_docs", {:docs => docs}
     end
     alias :bulk_delete :bulk_save
     
@@ -206,7 +213,7 @@ module CouchRest
         return { "ok" => true } # Mimic the non-deferred version
       end
       slug = escape_docid(doc['_id'])        
-      CouchRest.delete "#{@uri}/#{slug}?rev=#{doc['_rev']}"
+      CouchRest.delete "#{self}/#{slug}?rev=#{doc['_rev']}"
     end
     
     ### DEPRECATION NOTICE
@@ -226,7 +233,7 @@ module CouchRest
       else
         dest
       end
-      CouchRest.copy "#{@uri}/#{slug}", destination
+      CouchRest.copy "#{self}/#{slug}", destination
     end
     
     ### DEPRECATION NOTICE
@@ -237,7 +244,7 @@ module CouchRest
     
     # Compact the database, removing old document revisions and optimizing space use.
     def compact!
-      CouchRest.post "#{@uri}/_compact"
+      CouchRest.post "#{self}/_compact"
     end
     
     # Create the database
@@ -258,19 +265,19 @@ module CouchRest
     # Replicates via "pulling" from another database to this database. Makes no attempt to deal with conflicts.
     def replicate_from other_db
       raise ArgumentError, "must provide a CouchReset::Database" unless other_db.kind_of?(CouchRest::Database)
-      CouchRest.post "#{@host}/_replicate", :source => other_db.root, :target => name
+      CouchRest.post "#{server}/_replicate", :source => other_db.to_s, :target => name
     end
     
     # Replicates via "pushing" to another database. Makes no attempt to deal with conflicts.
     def replicate_to other_db
       raise ArgumentError, "must provide a CouchReset::Database" unless other_db.kind_of?(CouchRest::Database)
-      CouchRest.post "#{@host}/_replicate", :target => other_db.root, :source => name
+      CouchRest.post "#{server}/_replicate", :target => other_db.to_s, :source => name
     end
     
     # DELETE the database itself. This is not undoable and could be rather
     # catastrophic. Use with care!
     def delete!
-      CouchRest.delete @uri
+      CouchRest.delete self.to_s
     end
 
     private
@@ -287,7 +294,7 @@ module CouchRest
       docid = escape_docid(docid)
       name = CGI.escape(name)
       rev = "?rev=#{doc['_rev']}" if rev
-      "#{@root}/#{docid}/#{name}#{rev}"
+      "#{self}/#{docid}/#{name}#{rev}"
     end
     
     def escape_docid id      

@@ -38,7 +38,7 @@ describe "Subclassing an ExtendedDocument" do
   end
   
   it "should share the same db default" do
-    @card.database.uri.should == Card.database.uri
+    @card.database.to_s.should == Card.database.to_s
   end
   
   it "should share the same autovalidation details" do

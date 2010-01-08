@@ -18,6 +18,8 @@ require 'json'
 gem 'rest-client'
 require 'rest_client'
 
+require 'uri'
+
 $:.unshift File.dirname(__FILE__) unless
   $:.include?(File.dirname(__FILE__)) ||
   $:.include?(File.expand_path(File.dirname(__FILE__)))
@@ -49,7 +51,7 @@ module CouchRest
   autoload :CastedModel,          'couchrest/more/casted_model'
   
   require File.join(File.dirname(__FILE__), 'couchrest', 'mixins')
-  
+
   # The CouchRest module methods handle the basic JSON serialization 
   # and deserialization, as well as query parameters. The module also includes
   # some helpers for tasks like instantiating a new Database or Server instance.
@@ -89,55 +91,37 @@ module CouchRest
       Server.new(*opts)
     end
     
-    def parse url
-      case url
-      when /^http:\/\/(.*)\/(.*)\/(.*)/
-        host = $1
-        db = $2
-        docid = $3
-      when /^http:\/\/(.*)\/(.*)/
-        host = $1
-        db = $2
-      when /^http:\/\/(.*)/
-        host = $1
-      when /(.*)\/(.*)\/(.*)/
-        host = $1
-        db = $2
-        docid = $3
-      when /(.*)\/(.*)/
-        host = $1
-        db = $2
-      else
-        db = url
-      end
-
-      db = nil if db && db.empty?
-
-      {
-        :host => host || "127.0.0.1:5984",
-        :database => db,
-        :doc => docid
-      }
-    end
-
     # set proxy for RestClient to use
     def proxy url
       RestClient.proxy = url
     end
 
+    def url(url)
+      parsed = URI.parse url
+      def parsed.couch_split
+        @couch_split ||= path.sub(/^\//,'').split('/',2)
+      end
+      def parsed.database
+        couch_split.first
+      end
+      def parsed.doc
+        (couch_split.length == 2 && couch_split.last) || ''
+      end
+      parsed
+    end
+     
+
     # ensure that a database exists
     # creates it if it isn't already there
     # returns it after it's been created
     def database! url
-      parsed = parse url
-      cr = CouchRest.new(parsed[:host])
-      cr.database!(parsed[:database])
+      cr = CouchRest.new(url)
+      cr.database!(cr.url.database)
     end
   
     def database url
-      parsed = parse url
-      cr = CouchRest.new(parsed[:host])
-      cr.database(parsed[:database])
+      cr = CouchRest.new(url)
+      cr.database(cr.url.database)
     end
 
     def http_headers

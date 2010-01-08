@@ -41,7 +41,7 @@ module CouchRest
       # returns URL to fetch the attachment from
       def attachment_url(attachment_name)
         return unless has_attachment?(attachment_name)
-        "#{database.root}/#{self.id}/#{attachment_name}"
+        "#{database}/#{self.id}/#{attachment_name}"
       end
       
       private
