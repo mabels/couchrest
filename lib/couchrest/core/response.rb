@@ -8,7 +8,7 @@ module CouchRest
       @attributes ||= {}
       @parent = pkeys.delete(:parent)
       pkeys.each do |k,v| 
-        @attributes[k.to_sym] = v 
+        (respond_to?(k.to_s+'=') && (send(k.to_s+'=', v) || true)) || @attributes[k.to_sym] = v 
       end
     end
     def []=(key, value)

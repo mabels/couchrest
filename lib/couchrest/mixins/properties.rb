@@ -134,7 +134,7 @@ module CouchRest
           def create_property_setter(property)
             meth = property.name
             if property.coerce
-               value = "value.#{property.coerce}" 
+               value = "value.nil? ? nil : value.#{property.coerce}" 
             else
                value = "value"
             end
