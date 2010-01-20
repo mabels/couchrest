@@ -350,6 +350,7 @@ describe "ExtendedDocument" do
       end
       art = MyTest.new
       art.save
+      art['_id'].should == art.document.id
       art['_id'].should == art.id
       art.destroy
     end

@@ -35,15 +35,15 @@ module CouchRest
       apply_defaults # defined in CouchRest::Mixins::Properties
       super
       cast_keys      # defined in CouchRest::Mixins::Properties
-      unless self['_id'] && self['_rev']
+      #unless self['_id'] && self['_rev']
         self['couchrest-type'] = self.class.to_s
         if self.respond_to? :get_unique_id
            def self.id
-              @inner_id ||= self.get_unique_id
+              @inner_id ||= self['_id'] || self.get_unique_id
               @inner_id
            end
         end
-      end
+      #end
     end
     
     
