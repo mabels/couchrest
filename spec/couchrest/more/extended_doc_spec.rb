@@ -340,6 +340,20 @@ describe "ExtendedDocument" do
       @sobj['couchrest-type'].should == 'Basic'
     end
   end
+
+  describe "save a model with a auto id the id should by constant further on" do
+    it "should save the model" do
+      class MyTest < CouchRest::ExtendedDocument
+         use_database TEST_SERVER.default_database
+         unique_id { |o| "".object_id.to_s }
+         property :wurm
+      end
+      art = MyTest.new
+      art.save
+      art['_id'].should == art.id
+      art.destroy
+    end
+  end
   
   describe "saving a model with a unique_id configured" do
     before(:each) do

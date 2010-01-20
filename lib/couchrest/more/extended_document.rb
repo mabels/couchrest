@@ -40,6 +40,7 @@ module CouchRest
         if self.respond_to? :get_unique_id
            def self.id
               @inner_id ||= self.get_unique_id
+              @inner_id
            end
         end
       end
@@ -81,7 +82,7 @@ module CouchRest
         end
       end
       define_method :set_unique_id do
-         self['_id'] ||= self.get_unique_id
+         @inner_id = self['_id'] ||= self.get_unique_id
       end
     end
     
