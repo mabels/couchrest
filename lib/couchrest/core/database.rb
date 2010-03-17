@@ -64,7 +64,7 @@ module CouchRest
       keys = params.delete(:keys)
       funcs = funcs.merge({:keys => keys}) if keys
       url = CouchRest.paramify_url "#{self}/_temp_view", params
-      JSON.parse(RestClient.post(url, funcs.to_json, CouchRest.http_headers))
+      CouchRest._json.parse(RestClient.post(url, CouchRest._json.encode(funcs), CouchRest.http_headers))
     end
     
     # backwards compatibility is a plus
@@ -123,14 +123,14 @@ module CouchRest
       docid = escape_docid(doc['_id'])
       #name = CGI.escape(name)
       uri = uri_for_attachment(doc, name)       
-      JSON.parse(RestClient.put(uri, file, options))
+      CouchRest._json.parse(RestClient.put(uri, file, options))
     end
     
     # DELETE an attachment directly from CouchDB
     def delete_attachment doc, name
       uri = uri_for_attachment(doc, name)
       # this needs a rev
-      JSON.parse(RestClient.delete(uri))
+      CouchRest._json.parse(RestClient.delete(uri))
     end
     
     # Save a document to CouchDB. This will use the <tt>_id</tt> field from

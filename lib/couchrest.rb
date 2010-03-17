@@ -13,8 +13,6 @@
 #    limitations under the License.
 
 require "rubygems"
-gem 'json'
-require 'json'
 gem 'rest-client'
 require 'rest_client'
 
@@ -52,10 +50,25 @@ module CouchRest
   
   require File.join(File.dirname(__FILE__), 'couchrest', 'mixins')
 
+  require 'yajl'
+  class Yajl
+    def self.parse(str)
+      ::Yajl::Parser.parse(str)
+    end
+    def self.encode(hash)
+      ::Yajl::Encoder.encode(hash, :indent => true)
+    end
+  end
+#  require 'json'
+
+
   # The CouchRest module methods handle the basic JSON serialization 
   # and deserialization, as well as query parameters. The module also includes
   # some helpers for tasks like instantiating a new Database or Server instance.
   class << self
+    def _json
+      Yajl
+    end       
 
     # extracted from Extlib
     #
@@ -129,9 +142,9 @@ module CouchRest
     end
     
     def put(uri, doc = nil)
-      payload = doc.to_json if doc
+      payload = CouchRest._json.encode(doc) if doc
       begin
-        JSON.parse(RestClient.put(uri, payload,  CouchRest.http_headers))
+        _json.parse(RestClient.put(uri, payload,  CouchRest.http_headers))
       rescue Exception => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a PUT request #{uri}\npayload: #{payload.inspect}\n#{e}"
@@ -143,7 +156,7 @@ module CouchRest
 
     def get(uri)
       begin
-        JSON.parse(RestClient.get(uri), :max_nesting => false)
+        _json.parse(RestClient.get(uri))# , :max_nesting => false)
       rescue => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a GET request #{uri}\n: #{e}"
@@ -154,9 +167,9 @@ module CouchRest
     end
   
     def post uri, doc = nil
-      payload = doc.to_json if doc
+      payload = CouchRest._json.encode(doc) if doc
       begin
-        JSON.parse(RestClient.post(uri, payload, CouchRest.http_headers))
+        _json.parse(RestClient.post(uri, payload, CouchRest.http_headers))
       rescue Exception => e
         if $COUCHREST_DEBUG == true
           raise "Error while sending a POST request #{uri}\npayload: #{payload.inspect}\n#{e}"
@@ -167,17 +180,17 @@ module CouchRest
     end
   
     def delete uri
-      JSON.parse(RestClient.delete(uri))
+      _json.parse(RestClient.delete(uri))
     end
     
     def copy uri, destination
-      JSON.parse(RestClient.copy(uri, {'Destination' => destination}))
+      _json.parse(RestClient.copy(uri, {'Destination' => destination}))
     end
   
     def paramify_url url, params = {}
       if params && !params.empty?
         query = params.collect do |k,v|
-          v = v.to_json if %w{key startkey endkey}.include?(k.to_s)
+          v = CouchRest._json.encode(v) if %w{key startkey endkey}.include?(k.to_s)
           "#{k}=#{CGI.escape(v.to_s)}"
         end.join("&")
         url = "#{url}?#{query}"

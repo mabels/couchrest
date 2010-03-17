@@ -49,7 +49,7 @@ module CouchRest
     end
     def to_json
       @attributes ||= {}
-      attributes.to_json
+      CouchRest._json.encode(attributes)
     end
   end
 end

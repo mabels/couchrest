@@ -26,7 +26,7 @@ module CouchRest
     def parse_line line
       return nil unless line
       if /(\{.*\}),?/.match(line.chomp)
-        JSON.parse($1)
+        CouchRest._json.parse($1)
       end
     end
 
@@ -35,7 +35,7 @@ module CouchRest
       parts = first.split(',')
       parts.pop
       line = parts.join(',')
-      JSON.parse("#{line}}")
+      CouchRest._json.parse("#{line}}")
     rescue
       nil
     end
