@@ -378,7 +378,7 @@ describe CouchRest::Database do
       @doc = {
         "field" => ["some other value"],
         "_attachments" => {
-          "dir/oder%20nicht" => {
+          "/dir/oder%20nicht" => {
             "type" => "text/html",
             "data" => @attach
           }
@@ -388,11 +388,11 @@ describe CouchRest::Database do
     end
     it "should save and be indicated" do
       doc = @db.get(@docid)
-      doc['_attachments']['dir/oder%20nicht']['length'].should == @attach.length
+      doc['_attachments']['/dir/oder%20nicht']['length'].should == @attach.length
     end
     it "should be there" do
       doc = @db.get(@docid)
-      attachment = @db.fetch_attachment(doc,"dir/oder%2520nicht")
+      attachment = @db.fetch_attachment(doc,"/dir/oder%20nicht")
       attachment.should == @attach
     end
   end
