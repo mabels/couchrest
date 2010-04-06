@@ -49,26 +49,39 @@ module CouchRest
   autoload :CastedModel,          'couchrest/more/casted_model'
   
   require File.join(File.dirname(__FILE__), 'couchrest', 'mixins')
-
-  require 'yajl'
-  class Yajl
-    def self.parse(str)
-      ::Yajl::Parser.parse(str)
-    end
-    def self.encode(hash)
-      ::Yajl::Encoder.encode(hash, :indent => true)
-    end
+  begin
+     require 'yajl'
+     class Yajl
+       def self.parse(str)
+         ::Yajl::Parser.parse(str)
+       end
+       def self.encode(hash)
+         ::Yajl::Encoder.encode(hash, :indent => true)
+       end
+     end
+     def self._json
+       Yajl
+     end       
+  rescue Exception => e
+     require 'json'
+     class Json
+       def self.parse(str)
+         ::JSON.parse(str)
+       end
+       def self.encode(hash)
+         hash.to_json #::JSON.unparse(hash)
+       end
+     end
+     def self._json
+       Json
+     end       
   end
-#  require 'json'
 
 
   # The CouchRest module methods handle the basic JSON serialization 
   # and deserialization, as well as query parameters. The module also includes
   # some helpers for tasks like instantiating a new Database or Server instance.
   class << self
-    def _json
-      Yajl
-    end       
 
     # extracted from Extlib
     #

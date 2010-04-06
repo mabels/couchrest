@@ -112,7 +112,7 @@ module CouchRest
     # GET an attachment directly from CouchDB
     def fetch_attachment(doc, name)
       # slug = escape_docid(docid)        
-      # name = CGI.escape(name)
+      name = CGI.escape(name)
       uri = uri_for_attachment(doc, name)
       RestClient.get uri
       # "#{self}/#{slug}/#{name}"
