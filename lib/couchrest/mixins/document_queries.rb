@@ -34,6 +34,7 @@ module CouchRest
         # Load a document from the database by id
         def get(id, db = database)
           return nil if id.nil?
+          return nil if id.empty?
           db.get id, {}, self.name
         end
         
