@@ -1,6 +1,4 @@
 require "rubygems"
-require "bundler"
-Bundler.setup
 
 require File.join(File.dirname(__FILE__), '..','lib','couchrest')
 # check the following file to see how to use the spec'd features.

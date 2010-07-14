@@ -9,9 +9,8 @@ class Time
   # order is preserved. (There's no longer a need to set <tt>ENV['TZ'] = 'UTC'</tt>
   # in your application.)
 
-  def to_json(options = nil)
-    u = self.getutc
-    %("#{u.strftime("%Y/%m/%d %H:%M:%S +0000")}")
+  def to_json(*a)
+    %("#{self.getutc.strftime("%Y/%m/%d %H:%M:%S +0000")}")
   end
 
   # Decodes the JSON time format to a UTC time.
@@ -24,6 +23,18 @@ class Time
   # rescue
   #   fallback
   # end
+end
+
+class Date
+  def to_json(*a)
+    %("#{self.strftime("%Y-%m-%d")}")
+  end
+end
+
+class DateTime < Date
+  def to_json(*a)
+    %("#{self.getutc.strftime("%Y/%m/%d %H:%M:%S +0000")}")
+  end
 end
 
 # Monkey patch for faster net/http io

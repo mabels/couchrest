@@ -24,5 +24,17 @@ module CouchRest
     def [] key
       super(key.to_s)
     end
+
+    def to_json(*a)
+      {
+        JSON.create_id => self.class.name,
+      }.merge(self).to_json(*a)
+    end
+
+    def self.json_create(o)
+      o.delete JSON.create_id
+      new.merge(o)
+    end
+
   end
 end

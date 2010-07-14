@@ -13,8 +13,8 @@
 #    limitations under the License.
 
 require "rubygems"
-gem 'rest-client'
-require 'rest_client'
+#gem 'rest_client'
+require 'restclient'
 
 require 'uri'
 
@@ -58,6 +58,12 @@ module CouchRest
        def self.encode(hash)
          ::Yajl::Encoder.encode(hash, :indent => true)
        end
+       def self.encode_str(str)
+         ::Yajl::Encoder.encode(str)
+       end
+       def self.version
+         "Yajl-"
+       end
      end
      def self._json
        Yajl
@@ -66,13 +72,18 @@ module CouchRest
      require 'json'
      class Json
        def self.parse(str)
-         ::JSON.parse(str)
+         ::JSON.parse(str, :max_nesting => 100)
        end
        def self.encode(hash)
-         hash.to_json #::JSON.unparse(hash)
+#puts "ENCODE:"+hash.class.name+":"+hash.inspect
+#         hash.to_json #::JSON.unparse(hash)
+        ::JSON.generate(hash)
        end
        def self.encode_str(str)
          str.to_json
+       end
+       def self.version
+         ::JSON::VERSION
        end
      end
      def self._json
@@ -80,6 +91,7 @@ module CouchRest
      end       
   end
 
+puts "JSON=>"+_json.version
 
   # The CouchRest module methods handle the basic JSON serialization 
   # and deserialization, as well as query parameters. The module also includes

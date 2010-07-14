@@ -122,12 +122,12 @@ module CouchRest
       end
       
       def normalize_options!(options)
-        options[:if] = Array(options[:if])
-        options[:unless] = Array(options[:unless])
+        options[:if] = Kernel.Array(options[:if])
+        options[:unless] = Kernel.Array(options[:unless])
 
         options[:per_key] ||= {}
-        options[:per_key][:if] = Array(options[:per_key][:if])
-        options[:per_key][:unless] = Array(options[:per_key][:unless])
+        options[:per_key][:if] = Kernel.Array(options[:per_key][:if])
+        options[:per_key][:unless] = Kernel.Array(options[:per_key][:unless])
       end
       
       def next_id
@@ -252,11 +252,11 @@ module CouchRest
         conditions = []
         
         unless options[:if].empty?
-          conditions << Array(_compile_filter(options[:if]))
+          conditions << Kernel.Array(_compile_filter(options[:if]))
         end
         
         unless options[:unless].empty?
-          conditions << Array(_compile_filter(options[:unless])).map {|f| "!#{f}"}
+          conditions << Kernel.Array(_compile_filter(options[:unless])).map {|f| "!#{f}"}
         end
         
         ["if #{conditions.flatten.join(" && ")}", "end"]
@@ -317,7 +317,7 @@ module CouchRest
     end
     
     # An Array with a compile method
-    class CallbackChain < Array
+    class CallbackChain < ::Array
       def initialize(symbol)
         @symbol = symbol
       end

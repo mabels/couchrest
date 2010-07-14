@@ -47,7 +47,7 @@ module CouchRest
       out << '}>'
       out.join('')
     end
-    def to_json
+    def to_json(*a)
       @attributes ||= {}
       CouchRest._json.encode(attributes)
     end
