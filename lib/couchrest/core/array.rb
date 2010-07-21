@@ -4,8 +4,8 @@ module CouchRest
 
     (::Array.instance_methods-::Array.superclass.instance_methods).each do |fn|
       class_eval <<-METH, __FILE__, __LINE__
-        def #{fn}(*a)
-          @my.#{fn}(*a) 
+        def #{fn}(*a, &block)
+          @my.#{fn}(*a, &block) 
         end
       METH
     end
@@ -14,6 +14,10 @@ module CouchRest
 
     def initialize(*a) 
       @my = ::Array.new(*a)
+    end
+
+    def is_a?(c)
+      kind_of?(c)
     end
 
     def kind_of?(c)
