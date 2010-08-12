@@ -42,6 +42,10 @@ module CouchRest
       @my.to_json(*a)
     end
 
+    def to_a
+      @my
+    end
+
   end
   
 end
